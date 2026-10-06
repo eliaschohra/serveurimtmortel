@@ -42,6 +42,48 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
       this.kits.put(var1.id(), var1);
    }
 
+   /**
+    * Les bottes de Silas : des bottes en fer Agilite givree I, deja usees a
+    * moitie — elles ont vecu.
+    */
+   static ItemStack silasBoots() {
+      ItemStack var0 = e(Material.IRON_BOOTS, Enchantment.FROST_WALKER, 1);
+      var0.editMeta(var1 -> {
+         if (var1 instanceof org.bukkit.inventory.meta.Damageable var2) {
+            var2.setDamage(Material.IRON_BOOTS.getMaxDurability() / 2);
+         }
+      });
+      return Util.lore(
+         Util.named(var0, "<#7FE3FF>Bottes de Silas</#7FE3FF>"),
+         List.of(
+            "<gray>Les bottes que Silas portait à son âge d'or",
+            "<gray>sur League of Legends. Il glissait sur ses",
+            "<gray>ennemis tel un surfeur de glace."
+         )
+      );
+   }
+
+   /**
+    * {@code /vote ‹liste›} : prendre le kit d'une liste, et lui donner une voix.
+    *
+    * @return false si ce n'est pas un nom de liste connu
+    */
+   public boolean voteList(Player var1, String var2) {
+      String var3 = var2.toLowerCase(Locale.ROOT);
+
+      if (var3.equals("brest")) {
+         this.pl.fun().brest(var1);
+         return true;
+      }
+
+      if (!this.voteKits.contains(var3)) {
+         return false;
+      }
+
+      this.claim(var1, this.kits.get(var3));
+      return true;
+   }
+
    private static ItemStack e(Material var0, Object... var1) {
       ItemStack var2 = new ItemStack(var0);
 
@@ -144,7 +186,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
       this.add(
          new Kits.Kit(
             "imtmortel",
-            "/kit vote imtmortel",
+            "/vote imtmortel",
             "IMTmortel",
             Material.GOLDEN_CARROT,
             7200000L,
@@ -163,7 +205,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
       this.add(
          new Kits.Kit(
             "zimtzimt",
-            "/kit vote zimtzimt",
+            "/vote zimtzimt",
             "ZIMTzimt",
             Material.ROTTEN_FLESH,
             7200000L,
@@ -177,21 +219,21 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
       this.add(
          new Kits.Kit(
             "ascension",
-            "/kit vote ascension",
+            "/vote ascension",
             "Ascension",
             Material.POLAR_BEAR_SPAWN_EGG,
             7200000L,
             Kits.Req.TOUS,
             "vote",
             false,
-            List.of("Un œuf d'ours polaire"),
-            () -> List.of(n(1, Material.POLAR_BEAR_SPAWN_EGG))
+            List.of("Un œuf d'ours polaire", "Les bottes de Silas (Agilité givrée I)"),
+            () -> List.of(n(1, Material.POLAR_BEAR_SPAWN_EGG), silasBoots())
          )
       );
       this.add(
          new Kits.Kit(
             "bartbart",
-            "/kit vote bartbart",
+            "/vote bartbart",
             "BartBart",
             Material.GOLDEN_AXE,
             7200000L,
@@ -205,7 +247,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
       this.add(
          new Kits.Kit(
             "wizart",
-            "/kit vote wizart",
+            "/vote wizart",
             "WizArt",
             Material.STICK,
             7200000L,
@@ -219,7 +261,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
       this.add(
          new Kits.Kit(
             "passion",
-            "/kit vote passion",
+            "/vote passion",
             "Passion",
             Material.BOW,
             7200000L,
@@ -531,7 +573,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
          long var4 = this.remaining(var1, var2);
          if (var4 > 0L) {
             if (var2.group() != null) {
-               Msg.err(var1, "Tu as déjà pris un kit vote. Le prochain sera dispo dans <white><t></white>.", Msg.p("t", Util.duration(var4)));
+               Msg.err(var1, "Tu as déjà pris un kit de liste. Le prochain sera dispo dans <white><t></white>.", Msg.p("t", Util.duration(var4)));
             } else if (this.blockedByOtherTop(var1, var2)) {
                Msg.err(var1, "Tu as pris l'autre kit du top il y a moins de 2 h. Dispo dans <white><t></white>.", Msg.p("t", Util.duration(var4)));
             } else {
@@ -551,6 +593,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
                this.pl.state().listVotes.merge(var2.id(), 1, Integer::sum);
                this.pl.state().save();
                this.pl.votes().updateSidebar();
+               this.pl.sounds().playList(var1, var2.id());
             }
 
             boolean var7 = Util.give(var1, var2.items().get());
@@ -596,7 +639,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
 
    private void showLists(Player var1) {
       Msg.raw(var1, " ");
-      Msg.raw(var1, "<#FF9AC8><bold>\ud83d\uddf3 Les listes les plus votées</bold></#FF9AC8> <dark_gray>(1 kit vote = 1 voix)");
+      Msg.raw(var1, "<#FF9AC8><bold>\ud83d\uddf3 Les listes les plus votées</bold></#FF9AC8> <dark_gray>(1 /vote ‹liste› = 1 voix)");
       int var2 = 1;
 
       for (Entry var4 : this.listRanking()) {
@@ -610,7 +653,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
                + this.listName((String)var4.getKey())
                + "</white> <dark_gray>— <#4FC3FF>"
                + var4.getValue()
-               + " voix</#4FC3FF> <dark_gray>(/kit vote "
+               + " voix</#4FC3FF> <dark_gray>(/vote "
                + (String)var4.getKey()
                + ")"
          );
@@ -641,7 +684,7 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
                   if (var4.length < 2) {
                      Msg.poulpy(
                         var5,
-                        "Kits vote (un seul toutes les 2 h) : <white>imtmortel</white>, <white>zimtzimt</white>, <white>ascension</white>, <white>bartbart</white>, <white>wizart</white>, <white>passion</white>. Chaque kit pris = 1 voix pour la liste ! Exemple : <white>/kit vote wizart</white>"
+                        "Kits des listes (un seul toutes les 2 h) : <white>imtmortel</white>, <white>zimtzimt</white>, <white>ascension</white>, <white>bartbart</white>, <white>wizart</white>, <white>passion</white>. Chaque kit pris = 1 voix pour la liste ! Exemple : <white>/vote wizart</white>"
                      );
                      return true;
                   }

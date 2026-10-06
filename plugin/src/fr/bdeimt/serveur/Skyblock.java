@@ -65,6 +65,8 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       public volatile UUID owner;
       public volatile String ownerName;
       public volatile long created;
+      /** Les voix recues par /vote ‹pseudo›, une par joueur et par jour. */
+      public volatile int votes;
       public final Set<UUID> members = new LinkedHashSet<>();
 
       Island(int x, int z, UUID owner, String ownerName) {
@@ -82,6 +84,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    private final BDEIMT pl;
    private final File file;
    private final Map<String, Skyblock.Island> islands = new ConcurrentHashMap<>();
+   private final Map<UUID, Long> lastVote = new ConcurrentHashMap<>();
    /** Invitations en attente : invite -> « case de l'ile|moment ». */
    private final Map<UUID, String> invites = new ConcurrentHashMap<>();
 
@@ -186,6 +189,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
                   root.getString(key + ".nom", "?")
                );
                island.created = root.getLong(key + ".creee");
+               island.votes = root.getInt(key + ".voix");
 
                for (String uuid : root.getStringList(key + ".membres")) {
                   island.members.add(UUID.fromString(uuid));
@@ -194,6 +198,17 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
                this.islands.put(island.key(), island);
             } catch (Exception ex) {
                this.pl.getLogger().warning("Ile illisible : " + key);
+            }
+         }
+      }
+
+      ConfigurationSection votes = yml.getConfigurationSection("derniers-votes");
+
+      if (votes != null) {
+         for (String key : votes.getKeys(false)) {
+            try {
+               this.lastVote.put(UUID.fromString(key), votes.getLong(key));
+            } catch (IllegalArgumentException ex) {
             }
          }
       }
@@ -209,6 +224,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
          yml.set(path + ".proprietaire", island.owner.toString());
          yml.set(path + ".nom", island.ownerName);
          yml.set(path + ".creee", island.created);
+         yml.set(path + ".voix", island.votes);
          List<String> members = new ArrayList<>();
 
          for (UUID uuid : island.members) {
@@ -216,6 +232,10 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
          }
 
          yml.set(path + ".membres", members);
+      }
+
+      for (Map.Entry<UUID, Long> entry : this.lastVote.entrySet()) {
+         yml.set("derniers-votes." + entry.getKey(), entry.getValue());
       }
 
       try {
@@ -720,6 +740,52 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
             this.pl.getLogger().info("Ile " + island.key() + " effacee.");
          }
       }, 1L, 1L);
+   }
+
+   // ------------------------------------------------------------- les voix
+
+   /**
+    * {@code /vote ‹pseudo›} dans le skyblock : une voix pour l'ile de
+    * quelqu'un, une fois par jour. Pas pour la sienne.
+    */
+   public void voteIsland(Player p, String name) {
+      long now = System.currentTimeMillis();
+      Long last = this.lastVote.get(p.getUniqueId());
+
+      if (last != null && now - last < 86400000L && !this.pl.ranks().isAdmin(p)) {
+         Msg.err(p, "Une voix par jour. Prochaine dans <white>" + Util.duration(86400000L - (now - last)) + "</white>.");
+         return;
+      }
+
+      UUID owner = this.resolve(name);
+      Skyblock.Island island = owner == null ? null : this.islandOf(owner);
+
+      if (island == null) {
+         Msg.err(p, "<white>" + name.replace("<", "") + "</white> n'a pas d'île.");
+         return;
+      }
+
+      if (island.owner.equals(p.getUniqueId()) || island.members.contains(p.getUniqueId())) {
+         Msg.err(p, "On ne vote pas pour sa propre île.");
+         return;
+      }
+
+      island.votes++;
+      this.lastVote.put(p.getUniqueId(), now);
+      this.save();
+      Msg.ok(p, "Ta voix du jour va à l'île de <white>" + island.ownerName + "</white>.");
+      Player online = Bukkit.getPlayer(island.owner);
+
+      if (online != null) {
+         Msg.alert(online, "<#7FE3FF><bold>+1 voix</bold></#7FE3FF>", "<white>" + p.getName() + "</white> <gray>a voté pour ton île</gray>");
+      }
+   }
+
+   /** Les iles les plus aimees, pour le panneau lateral. */
+   public List<Skyblock.Island> ranking() {
+      List<Skyblock.Island> all = new ArrayList<>(this.islands.values());
+      all.sort((a, b) -> b.votes != a.votes ? Integer.compare(b.votes, a.votes) : a.ownerName.compareToIgnoreCase(b.ownerName));
+      return all;
    }
 
    private UUID resolve(String name) {

@@ -28,7 +28,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
  * entre membres d'une meme liste, on se teleporte sans attendre, et le role
  * de chacun s'affiche a cote de son pseudo, dans la couleur de la liste.
  *
- * <p>A ne pas confondre avec les listes BDE du {@code /kit vote}, qui sont un
+ * <p>A ne pas confondre avec les listes BDE du {@code /vote ‹liste›}, qui sont un
  * concours de votes et vivent dans {@link Kits}.
  */
 public final class Lists implements Listener, CommandExecutor, TabCompleter {

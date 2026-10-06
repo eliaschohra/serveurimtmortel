@@ -51,6 +51,19 @@ public final class Votes implements CommandExecutor {
          if (var2.getName().equals("probavote")) {
             new Votes.ProbaMenu(0).open(var5);
             return true;
+         } else if (var4.length >= 1) {
+            // Dans le skyblock, /vote ‹pseudo› est une voix pour l'ile de quelqu'un.
+            if (this.pl.worlds().zoneOf(var5).group.equals(Zone.SKYBLOCK.group)) {
+               this.pl.skyblock().voteIsland(var5, var4[0]);
+               return true;
+            }
+
+            // En survie, /vote ‹liste› prend le kit d'une liste du BDE.
+            if (!this.pl.kits().voteList(var5, var4[0])) {
+               Msg.err(var5, "Liste inconnue. Les listes : <white>imtmortel</white>, <white>zimtzimt</white>, <white>ascension</white>, <white>bartbart</white>, <white>wizart</white>, <white>passion</white>.");
+            }
+
+            return true;
          } else {
             this.vote(var5);
             return true;

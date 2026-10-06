@@ -53,6 +53,9 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "photo":
                this.photo(var1);
                break;
+            case "aura":
+               this.aura(var1, var4);
+               break;
             case "resetmdp":
                if (var4.length < 2) {
                   Msg.err(var1, "/imt resetmdp ‹pseudo›");
@@ -455,6 +458,59 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       Msg.ok(sender, "<white>" + id + "</white> est pose ici.");
    }
 
+   /** {@code /imt aura ‹joueur› set|add|reset [nombre]} : l'aura a la main. */
+   private void aura(CommandSender sender, String[] args) {
+      if (args.length < 3) {
+         Msg.err(sender, "/imt aura ‹joueur› set ‹n›  ·  add ‹n›  ·  reset");
+         return;
+      }
+
+      PlayerData data = this.pl.data().byName(args[1]);
+
+      if (data == null) {
+         Msg.err(sender, "Joueur inconnu.");
+         return;
+      }
+
+      String mode = args[2].toLowerCase(Locale.ROOT);
+      long value = 0L;
+
+      if (!mode.equals("reset")) {
+         if (args.length < 4) {
+            Msg.err(sender, "Il faut un nombre : /imt aura " + args[1] + " " + mode + " ‹n›");
+            return;
+         }
+
+         try {
+            value = new java.math.BigDecimal(args[3].replace(",", ".")).longValueExact();
+         } catch (Exception ex) {
+            try {
+               value = (long)Double.parseDouble(args[3].replace(",", "."));
+            } catch (NumberFormatException ex2) {
+               Msg.err(sender, "Nombre invalide. Exemples : 5000, 1e12.");
+               return;
+            }
+         }
+      }
+
+      long before = data.aura;
+
+      switch (mode) {
+         case "set" -> data.aura = Math.max(0L, value);
+         case "add", "ajouter" -> data.aura = Math.max(0L, value > 0L && before > Long.MAX_VALUE - value ? Long.MAX_VALUE : before + value);
+         case "reset", "zero" -> data.aura = 0L;
+         default -> {
+            Msg.err(sender, "set, add ou reset.");
+            return;
+         }
+      }
+
+      data.touch();
+      this.pl.data().save(data);
+      this.pl.votes().updateSidebar();
+      Msg.ok(sender, "Aura de <white>" + data.name + "</white> : <white>" + before + "</white> → <white>" + data.aura + "</white>.");
+   }
+
    /**
     * {@code /imt photo} : accroche la photo du BDE la ou regarde l'admin.
     * Sur un mur, elle s'y accroche ; dans le vide, un support invisible est
@@ -518,7 +574,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
          return var5;
       } else {
          if (var4.length == 1) {
-            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo"));
+            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo", "aura"));
          } else if (var4.length == 2) {
             String var10 = var4[0].toLowerCase(Locale.ROOT);
             switch (var10) {

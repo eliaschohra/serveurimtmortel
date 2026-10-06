@@ -1,5 +1,8 @@
 package fr.bdeimt.serveur;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.inventory.Book;
+import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -14,7 +17,7 @@ public final class Announcer implements CommandExecutor {
       "Un <white>/vote</white> par heure = un lot au hasard parmi 200. Les plus rares sont annoncés à tout le serveur !",
       "Envie de voir tes chances ? <click:run_command:'/probavote'><#FF9AC8><u>/probavote</u></#FF9AC8></click> affiche les 200 lots et leurs probabilités.",
       "Mort ? Pas de panique : ta tombe garde ton stuff <white>24 h</white> et la barre en haut de l'écran t'y guide. Fonce : n'importe qui peut la piller !",
-      "Chaque <white>/kit vote ‹liste›</white> donne une voix à la liste. Qui gagne ? <white>/listes</white> (et à droite de l'écran).",
+      "Chaque <white>/vote ‹liste›</white> donne une voix à la liste. Qui gagne ? <white>/listes</white> (et à droite de l'écran).",
       "Le Traq ouvre au hasard plusieurs fois par jour, pendant 1 h. Quand LaPanthère l'annonce : <white>/traq</white> !",
       "Commandes de soirée : <white>/ghoule</white>, <white>/oniris</white>, <white>/sugardaddimt</white>, <white>/wei</white>, <white>/tunnel</white>... à tes risques et périls.",
       "L'enclume dépasse les limites : deux livres Tranchant V donnent Tranchant VI, et ainsi de suite jusqu'à <white>X</white> !",
@@ -44,44 +47,117 @@ public final class Announcer implements CommandExecutor {
          + "</u></#25D366></hover></click> sur WhatsApp, en précisant bien votre pseudo Minecraft.";
    }
 
+   /**
+    * Le guide du serveur : un livre de plusieurs pages, qui s'ouvre a l'ecran.
+    *
+    * <p>Couleurs sombres uniquement : le parchemin rend illisibles le jaune,
+    * le cyan et les pastels.
+    */
    public void guide(Player var1) {
-      Msg.raw(var1, " ");
-      Msg.raw(var1, "<gradient:#4FC3FF:#B66BFF:#FF5FAE><bold>━━━━━━━  Bienvenue sur le serveur du BDE  ━━━━━━━</bold></gradient>");
-      Msg.poulpy(var1, "Salut <white><n></white>, moi c'est Poulpy, l'IA du serveur. Voici l'essentiel :", Msg.p("n", var1.getName()));
-      Msg.raw(
-         var1,
-         " <#4FC3FF>⌂</#4FC3FF> <white>/sethome</white> <gray>et</gray> <white>/home</white> <dark_gray>—</dark_gray> <gray>ton point de retour (1 seul)</gray>"
+      List<String> var2 = new ArrayList<>();
+      var2.add(
+         "<dark_purple><bold>Le guide du serveur</bold></dark_purple>\n<dark_gray>BDE IMT Atlantique</dark_gray>\n\n"
+            + "<black>Ce guide a <bold>plusieurs pages</bold> : tourne-les avec la fleche en bas a droite.</black>\n\n"
+            + "<dark_blue>2</dark_blue> Le lobby\n<dark_blue>3</dark_blue> Survie : bases\n<dark_blue>4</dark_blue> Survie : votes, kits\n"
+            + "<dark_blue>5</dark_blue> Survie : listes\n<dark_blue>6</dark_blue> Survie : delires\n<dark_blue>7</dark_blue> Parkour\n"
+            + "<dark_blue>8</dark_blue> Parcelles\n<dark_blue>9</dark_blue> Skyblock\n<dark_blue>10</dark_blue> Secrets\n<dark_blue>11</dark_blue> Regles"
       );
-      Msg.raw(var1, " <#4FC3FF>✈</#4FC3FF> <white>/tpa ‹pseudo›</white> <dark_gray>—</dark_gray> <gray>rejoindre un ami (il doit accepter)</gray>");
-      Msg.raw(
-         var1,
-         " <#FF9AC8>★</#FF9AC8> <white>/vote</white> <dark_gray>—</dark_gray> <gray>toutes les heures, un lot au hasard · </gray><white>/probavote</white>"
+      var2.add(
+         "<dark_blue><bold>Le lobby</bold></dark_blue>\n\n"
+            + "<black>Clic droit sur la <dark_blue>boussole</dark_blue> pour choisir un monde, ou marche dans un portail.</black>\n\n"
+            + "<dark_green>/hub</dark_green> <black>revenir ici</black>\n<dark_green>/musique</dark_green> <black>couper la musique</black>\n\n"
+            + "<black>Chaque monde a son inventaire et son chat. Rien ne passe de l'un a l'autre.</black>\n\n"
+            + "<dark_gray>Zaza se frappe. Le Mobutu, non.</dark_gray>"
       );
-      Msg.raw(
-         var1,
-         " <#FFC93C>⚒</#FFC93C> <white>/kit</white> <dark_gray>—</dark_gray> <gray>kit de départ toutes les 2 h · tous les kits :</gray> <white>/help kit</white>"
+      var2.add(
+         "<dark_green><bold>Survie : les bases</bold></dark_green>\n\n"
+            + "<dark_green>/sethome</dark_green> <dark_green>/home</dark_green>\n<black>ton point de retour</black>\n\n"
+            + "<dark_green>/tpa</dark_green> <black>‹pseudo›</black>\n<black>rejoindre un ami</black>\n\n"
+            + "<dark_green>/msg</dark_green> <dark_green>/r</dark_green> <black>chuchoter</black>\n"
+            + "<dark_green>/echange</dark_green> <black>‹pseudo›</black>\n<black>echange securise</black>\n\n"
+            + "<black>Mort ? Ta <dark_red>tombe</dark_red> garde ton stuff 24 h.</black>"
       );
-      Msg.raw(
-         var1,
-         " <#C77DFF>✦</#C77DFF> <white>Aura</white> <dark_gray>—</dark_gray> <gray>enchaîne les coups critiques pour grimper au top 3 · </gray><white>/aura</white>"
+      var2.add(
+         "<dark_green><bold>Survie : votes, kits</bold></dark_green>\n\n"
+            + "<dark_green>/vote</dark_green> <black>un lot au hasard, toutes les heures</black>\n"
+            + "<dark_green>/probavote</dark_green> <black>les chances</black>\n\n"
+            + "<dark_green>/kit</dark_green> <black>kit de depart, toutes les 2 h</black>\n\n"
+            + "<dark_green>/vote</dark_green> <black>‹liste› : le kit d'une liste du BDE, et une voix pour elle</black>\n"
+            + "<dark_green>/listes</dark_green> <black>le classement</black>\n\n"
+            + "<dark_purple>/aura</dark_purple> <black>enchaine les coups critiques</black>"
       );
-      Msg.raw(var1, " <#C77DFF>⚰</#C77DFF> <gray>Mort ? Ta tombe garde ton stuff 24 h (et les autres peuvent la piller)</gray>");
-      Msg.raw(
-         var1,
-         " <#55FF88>\ud83d\uddf3</#55FF88> <white>/kit vote ‹liste›</white> <dark_gray>—</dark_gray> <gray>1 voix pour la liste · classement :</gray> <white>/listes</white>"
+      var2.add(
+         "<dark_green><bold>Survie : les listes</bold></dark_green>\n\n"
+            + "<black>Une bande de 20 max. Entre membres : pas de coups, et /tpa sans attente.</black>\n\n"
+            + "<dark_green>/liste create</dark_green> <black>‹nom›</black>\n"
+            + "<dark_green>/liste invite</dark_green> <black>‹joueur› ‹role›</black>\n"
+            + "<dark_green>/liste accept</dark_green>\n<dark_green>/liste role</dark_green>\n"
+            + "<dark_green>/liste kick</dark_green>\n<dark_green>/liste quitter</dark_green>"
       );
-      Msg.raw(
-         var1,
-         " <#FFC93C>\ud83c\udf7a</#FFC93C> <white>/traq</white> <white>/ghoule</white> <white>/oniris</white> <white>/sugardaddimt</white> <white>/wei</white> <white>/tunnel</white> <dark_gray>—</dark_gray> <gray>la vie de l'IMT</gray>"
+      var2.add(
+         "<gold><bold>Survie : la vie de l'IMT</bold></gold>\n\n"
+            + "<gold>/traq</gold> <black>s'il est ouvert...</black>\n"
+            + "<gold>/ghoule</gold> <black>a vos risques</black>\n"
+            + "<gold>/oniris</gold> <black>miaou</black>\n"
+            + "<gold>/sugardaddimt</gold> <black>gourmandise</black>\n"
+            + "<gold>/wei</gold> <black>un feu d'artifice</black>\n"
+            + "<gold>/tunnel</gold> <black>une histoire du campus</black>\n\n"
+            + "<dark_gray>Le Traq ouvre au hasard, une heure. Guette l'annonce.</dark_gray>"
       );
-      Msg.raw(var1, " <#C77DFF>✉</#C77DFF> <white>/msg</white> <gray>pour chuchoter ·</gray> <white>/echange ‹pseudo›</white> <gray>pour échanger</gray>");
-      Msg.raw(var1, " <#55FF88>❤</#55FF88> <gray>Respect et bonne humeur : pas de grief, pas d'insultes.</gray>");
-      Msg.raw(var1, "<dark_gray>Revois ce guide à tout moment avec</dark_gray> <click:run_command:'/guide'><#4FC3FF><u>/guide</u></#4FC3FF></click>");
-      Msg.raw(var1, " ");
-      PlayerData var2 = this.pl.data().get(var1);
-      if (!var2.guideSeen) {
-         var2.guideSeen = true;
-         var2.touch();
+      var2.add(
+         "<gold><bold>Le parkour du mois</bold></gold>\n\n"
+            + "<black>Une carte commune, sans stuff ni coups.</black>\n\n"
+            + "<black>Chaque point de controle te sauve : si tu tombes, tu y reviens.</black>\n\n"
+            + "<dark_green>/parkour</dark_green> <black>le classement</black>\n"
+            + "<dark_green>/parkour recommencer</dark_green>\n\n"
+            + "<black>Le plus loin gagne, puis le plus rapide.</black>"
+      );
+      var2.add(
+         "<dark_purple><bold>Les parcelles</bold></dark_purple>\n\n"
+            + "<black>Une parcelle en creatif, rien que pour toi. Une seule.</black>\n\n"
+            + "<dark_green>/parcelle creer</dark_green>\n<dark_green>/parcelle tp</dark_green> <black>[joueur]</black>\n"
+            + "<dark_green>/parcelle invite</dark_green>\n<dark_green>/parcelle ban</dark_green>\n"
+            + "<dark_green>/parcelle vote</dark_green> <black>une voix par jour</black>\n<dark_green>/parcelle top</dark_green>"
+      );
+      var2.add(
+         "<dark_aqua><bold>Le skyblock</bold></dark_aqua>\n\n"
+            + "<dark_green>/ile creer</dark_green> <black>ton ile</black>\n<dark_green>/ile</dark_green> <black>rentrer</black>\n"
+            + "<dark_green>/ile invite</dark_green> <black>‹joueur›</black>\n\n"
+            + "<dark_red>Rejoindre l'ile d'un ami efface la tienne.</dark_red>\n\n"
+            + "<dark_green>/vote</dark_green> <black>‹pseudo› une voix pour son ile</black>\n"
+            + "<dark_green>/marche</dark_green> <black>vendre et acheter</black>\n"
+            + "<dark_green>/solde</dark_green> <black>ton argent</black>"
+      );
+      var2.add(
+         "<dark_red><bold>Les secrets</bold></dark_red>\n\n"
+            + "<black>- A l'enclume, deux livres pareils montent plus haut que d'habitude. Bien plus haut.</black>\n\n"
+            + "<black>- Il existe un /vote pour une liste qui n'existe pas. Elle mene a Brest.</black>\n\n"
+            + "<black>- Certains succes ne s'annoncent pas.</black>\n\n"
+            + "<dark_gray>- On dit que le Mobutu peut tomber. On dit aussi ce qui arrive apres.</dark_gray>"
+      );
+      var2.add(
+         "<dark_blue><bold>Les regles</bold></dark_blue>\n\n"
+            + "<black>Respect et bonne humeur.</black>\n\n"
+            + "<black>Pas de grief, pas d'insultes, pas de triche.</black>\n\n"
+            + "<black>Un souci ? Ecris au staff avec /msg.</black>\n\n"
+            + "<dark_gray>Bon jeu !</dark_gray>"
+      );
+      List<Component> var3 = new ArrayList<>();
+
+      for (String var5 : var2) {
+         var3.add(Msg.mm(var5));
+      }
+
+      try {
+         var1.openBook(Book.book(Msg.mm("Guide du serveur"), Msg.mm("Poulpy"), var3));
+      } catch (Throwable var7) {
+         Msg.poulpy(var1, "Ton jeu n'a pas pu ouvrir le livre du guide.");
+      }
+
+      PlayerData var8 = this.pl.data().get(var1);
+      if (!var8.guideSeen) {
+         var8.guideSeen = true;
+         var8.touch();
       }
    }
 

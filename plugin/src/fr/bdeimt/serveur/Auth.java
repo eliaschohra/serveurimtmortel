@@ -483,6 +483,7 @@ public final class Auth implements Listener, CommandExecutor {
 
          this.pl.tab().refresh(var1);
          this.pl.skins().applyToAdmin(var1);
+         this.pl.sounds().offer(var1);
 
          if (!this.pl.doublesJar().isEmpty() && this.pl.ranks().isStaff(var1)) {
             Msg.danger(var1, "DEUX PLUGINS BDEIMT", "<#FFB3B3>le serveur peut charger l'ancienne version</#FFB3B3>");

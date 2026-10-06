@@ -51,6 +51,7 @@ public final class BDEIMT extends JavaPlugin {
    private Plots plots;
    private Skyblock skyblock;
    private Skins skins;
+   private Sounds sounds;
    /** Les autres jars BDEIMT trouves dans plugins/, s'il y en a. */
    private final java.util.List<String> doubles = new java.util.ArrayList<>();
    private SkyHub skyhub;
@@ -159,6 +160,10 @@ public final class BDEIMT extends JavaPlugin {
       return this.skins;
    }
 
+   public Sounds sounds() {
+      return this.sounds;
+   }
+
    /** Le nom du fichier .jar reellement charge par le serveur. */
    public String getFileName() {
       try {
@@ -217,6 +222,7 @@ public final class BDEIMT extends JavaPlugin {
       this.lists.load();
       this.npcs = new Npcs(this);
       this.skins = new Skins(this);
+      this.sounds = new Sounds(this);
       this.parkour = new Parkour(this);
       this.parkour.load();
       this.plots = new Plots(this);
