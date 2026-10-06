@@ -1,0 +1,1 @@
+package com.mojang.brigadier; import java.util.Collection; public interface RedirectModifier<S> { Collection<S> apply(com.mojang.brigadier.context.CommandContext<S> c) throws com.mojang.brigadier.exceptions.CommandSyntaxException; }

@@ -1,0 +1,1 @@
+/home/user/papermc/paper/paper-api/src/main/java:/home/user/papermc/paper/paper-api/src/generated/java:/home/user/serveurimtmortel/build/stubs

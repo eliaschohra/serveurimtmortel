@@ -1,0 +1,85 @@
+# ============================================================
+#  Histoires de /tunnel
+#  Chaque histoire est une liste de lignes, ecrites l'une apres
+#  l'autre dans le chat par le joueur qui fait /tunnel.
+#  Tu peux en modifier, en supprimer ou en ajouter, puis /imt reload.
+# ============================================================
+histoires:
+  zaza:
+    - "Bon, faut que je vous parle de Zaza."
+    - "Zaza a une relation compliquée avec les verres : dès qu'il en voit un, il le vide. Plein, à moitié plein, celui du voisin, aucune différence."
+    - "La dernière fois, il a demandé un verre d'eau au bar. Le barman a refusé, par respect pour la tradition."
+    - "Des chercheurs de l'IMT étudient encore son foie : ce serait le seul organe au monde qui tourne à l'énergie renouvelable."
+    - "Si vous le croisez en soirée, ne lui proposez rien. Il a déjà dit oui."
+  quentin:
+    - "Personne ne parle de Quentin, alors je vais le faire."
+    - "Quentin est un homme de principes : il boit trop, mais uniquement de la bière. Le vin ? Trop bourgeois. Les cocktails ? Une trahison."
+    - "Il connaît chaque pression du Traq par son prénom et salue les fûts en arrivant."
+    - "Un jour, quelqu'un lui a tendu un soft. Il a fait un malaise. Il a fallu une blonde en perfusion pour le ramener parmi nous."
+    - "Quentin, si tu lis ça : le houblon, ça ne compte pas comme un légume."
+  croizgoule:
+    - "Je dois vous raconter la malédiction de Croizgoule."
+    - "Chaque mois, il y a un cabaret. Et chaque mois, Croizgoule s'y casse les dents. C'est mathématique, c'est une loi de la physique."
+    - "Les dentistes de Nantes ont le calendrier des cabarets affiché dans leur cabinet. Ils bloquent la matinée du lendemain rien que pour lui."
+    - "Il a tout essayé : le protège-dents, le casque, rester assis toute la soirée. Rien n'y fait, le sol vient le chercher."
+    - "On lui doit une ligne entière du budget santé du BDE."
+  elias:
+    - "Petite confession à propos d'Elias."
+    - "Elias a un super-pouvoir : il se réveille chaque matin dans une convi différente. Jamais deux fois la même. Un vrai collectionneur."
+    - "La faute à ses pintes de vodka Jet. Ou de vodka Captain. Les témoins ne sont pas d'accord, et lui ne se souvient de rien."
+    - "Son téléphone contient un album « Où suis-je ? » rempli uniquement de photos de plafonds."
+    - "Il paraît qu'il a déjà visité la moitié de Nantes. À l'horizontale."
+  rossignol:
+    - "Faut qu'on parle de Rossignol."
+    - "Rossignol se moque de tout le monde, tout le temps, sans aucune raison. Quand il n'y a personne, il se moque du silence."
+    - "Il a ri pendant un partiel. Il a ri pendant une coupure de courant. Il est en train de rire en lisant ce message, je le sais."
+    - "Les psychologues parlent d'un cas unique : un rire sans déclencheur, comme une alarme incendie qui sonne pour le plaisir."
+    - "Rossignol, chante un peu plus, ricane un peu moins."
+  lucas:
+    - "L'histoire tragique de Lucas."
+    - "Lucas avait un accès au Traq. Un vrai, un sésame. Il l'a perdu."
+    - "Pourquoi ? L'insolence. Une insolence si pure et si raffinée qu'elle mériterait son propre cours en amphi."
+    - "Il a répondu au videur. Puis au videur du videur. Puis il a contesté la sanction en citant un règlement intérieur qui n'existe pas."
+    - "Aujourd'hui, il regarde le Traq de loin, comme un phare dans la nuit, en comptant les jours jusqu'à la fin de sa suspension."
+  appartement:
+    - "Il faut que quelqu'un raconte l'histoire de l'appartement des ghoules."
+    - "Il existe à Nantes un appartement. On l'appelle l'appartement des ghoules. Les voisins ont déménagé. Les plantes aussi."
+    - "Il s'y est passé des choses très sombres. Des choses que Mobutu aimerait oublier."
+    - "Les rumeurs disent que depuis cette nuit-là, Mobutu n'a plus jamais souri. Il a vu ce qu'aucun homme ne devrait voir."
+    - "Si vous passez devant à minuit, on entend encore des bruits de bouteilles. N'entrez pas. Ne posez pas de questions."
+  gimbass:
+    - "Personne n'a oublié la Gimbass."
+    - "C'était à la Feria. Trigatlol a pécho une meuf juste devant son ex. Mauvaise idée, timing catastrophique, exécution parfaite."
+    - "La tension est montée si vite que Zig et Sharko ont dû se battre. Pourquoi eux ? Personne ne sait. Ils étaient là, c'était leur destin."
+    - "Le combat a duré trois minutes. Il a fallu trois semaines à la promo pour s'en remettre."
+    - "Depuis, on dit « faire une Gimbass » quand une soirée part en vrille. Merci Trigatlol."
+  colibri:
+    - "Petit hommage à Colibri."
+    - "Colibri mesure deux mètres. Deux. Mètres. Un colibri de deux mètres, c'est déjà louche."
+    - "Pourtant, un soir, il s'est pris un coup de semelle... sur l'épaule. L'épaule. À presque deux mètres du sol."
+    - "Les experts cherchent encore comment c'est physiquement possible. Certains parlent d'un coup de pied sauté, d'autres d'une échelle."
+    - "Colibri, on t'aime, mais baisse-toi de temps en temps."
+  simon:
+    - "On doit parler de Simon."
+    - "Simon est un assisté. Il demande à tout le monde de l'emmener à la salle de sport, tous les jours, comme un enfant qu'on dépose à l'école."
+    - "Et chaque week-end, il disparaît à « Saint-Nazaire ». Il dit qu'il va voir la mer."
+    - "Mais on sait tous très bien que Saint-Nazaire, c'est le nom de ses deux meufs."
+    - "Simon, la salle est à 800 mètres. Saint-Nazaire, à une heure. Les priorités, mon grand."
+  gabin:
+    - "L'histoire de Gabin, l'éternel étudiant."
+    - "Gabin n'acceptera jamais que l'école soit finie pour lui. Le diplôme ? Une simple formalité administrative."
+    - "Il vient encore à l'école. Il vient encore en soirée. Il se fait bannir. Il revient."
+    - "Certains premières années pensent qu'il fait partie des murs, comme le distributeur de la MDE."
+    - "Gabin, il y a une vie après l'IMT. On te promet. Elle est moins drôle, mais elle existe."
+  jibril:
+    - "Une pensée pour Jibril."
+    - "Tout le monde adore Jibril. Vraiment tout le monde. C'est un consensus plus solide que n'importe quel vote du BDE."
+    - "Mais on le voit plus souvent sur le toit de la MDE qu'en salle J."
+    - "Les profs ont lancé un avis de recherche. Les pigeons du toit, eux, le considèrent comme un des leurs."
+    - "Jibril, la salle J a des chaises très confortables. Viens les tester, juste une fois."
+  pole_log:
+    - "Bon, une histoire sur le Pôle Log."
+    - "Le Pôle Log a une mission sacrée : ouvrir le Traq. Ils ont aussi un talent caché : ne pas l'ouvrir."
+    - "Quand on leur demande pourquoi c'est fermé, ils répondent « problème logistique ». C'est littéralement leur nom."
+    - "Les anciens racontent qu'un jour, le Traq a ouvert à l'heure prévue. Personne n'y a cru, tout le monde était déjà couché."
+    - "Pôle Log, on vous aime. Mais on remet le facteur sur le vélo, oui ou non ?"

@@ -1,0 +1,139 @@
+name: BDEIMT
+version: '1.7'
+main: fr.bdeimt.serveur.BDEIMT
+api-version: '1.21'
+author: Elias
+description: Serveur du BDE de l'IMT - lobby, connexion, votes, kits, tombes, tpa, echanges.
+softdepend: [SuperVanish, PremiumVanish, CoreProtect, GrimAC]
+load: POSTWORLD
+
+permissions:
+  bdeimt.admin:
+    description: Outils du Mobutu (/imt)
+    default: op
+  bdeimt.modo:
+    description: Commandes de moderation
+    default: op
+  bdeimt.op:
+    description: Maintenance et gestion des moderateurs
+    default: op
+
+commands:
+  register:
+    description: Creer ton mot de passe
+    usage: /register <mdp> <mdp>
+    aliases: [reg, inscription]
+  login:
+    description: Te connecter avec ton mot de passe
+    aliases: [l, log, connexion]
+  changemdp:
+    description: Changer ton mot de passe
+    aliases: [changepassword]
+  vote:
+    description: Un lot au hasard, toutes les heures
+  probavote:
+    description: Les 100 lots du /vote et leurs chances
+    aliases: [probavotes]
+  kit:
+    description: Recuperer un kit
+  kits:
+    description: Voir tous les kits
+  guide:
+    description: Le guide du serveur
+    aliases: [aide]
+  aura:
+    description: Ton aura et le top 3
+  tombes:
+    description: Voir tes tombes
+    aliases: [tombe]
+  tpa:
+    description: Demander a rejoindre un joueur
+  tpahere:
+    description: Demander a un joueur de te rejoindre
+  tpaccept:
+    description: Accepter une demande de teleportation
+    aliases: [tpyes]
+  tpdeny:
+    description: Refuser une demande de teleportation
+    aliases: [tpno]
+  tpcancel:
+    description: Annuler ta demande de teleportation
+  tpatoggle:
+    description: Refuser toutes les demandes de teleportation
+  sethome:
+    description: Enregistrer un home
+  home:
+    description: Aller a un home
+  delhome:
+    description: Supprimer un home
+  homes:
+    description: Lister tes homes
+  spawn:
+    description: Retourner au spawn
+  msg:
+    description: Message prive
+    aliases: [w, whisper, tell, m, mp]
+  r:
+    description: Repondre au dernier message prive
+    aliases: [reply]
+  ignore:
+    description: Ignorer un joueur
+  echange:
+    description: Echanger des objets en securite
+    aliases: [trade]
+  fly:
+    description: Activer ou mettre en pause ton fly
+  mute:
+    description: Rendre un joueur muet
+    permission: bdeimt.modo
+  unmute:
+    description: Rendre la parole a un joueur
+    permission: bdeimt.modo
+  tempban:
+    description: Bannir temporairement
+    permission: bdeimt.modo
+    aliases: [bantemp]
+  ban:
+    description: Bannir
+    permission: bdeimt.modo
+  unban:
+    description: Debannir
+    permission: bdeimt.modo
+    aliases: [pardon]
+  kick:
+    description: Expulser
+    permission: bdeimt.modo
+  panel:
+    description: Tableau de bord du staff
+    permission: bdeimt.modo
+    aliases: [admin, dashboard]
+  maudire:
+    description: Le chatiment de Mobutu
+    permission: bdeimt.admin
+  imt:
+    description: Outils du Mobutu
+    permission: bdeimt.admin
+  ghoule:
+    description: Deviens une ghoule (1 fois toutes les 5 h)
+    aliases: [ghoul]
+  traq:
+    description: Fonce au Traq (quand il est ouvert)
+  oniris:
+    description: La chatterie d'Oniris (1 fois toutes les 2 h)
+  sugardaddimt:
+    description: Ton sugar daddy t'offre des gateaux (1 fois toutes les 2 h)
+    aliases: [sugardaddy]
+  wei:
+    description: Un feu d'artifice du WEI
+  tunnel:
+    description: Raconte une histoire... sans le vouloir (1 fois par heure)
+  listes:
+    description: Classement des listes les plus votees
+    aliases: [classementlistes]
+  maintenance:
+    description: Prevenir et fermer le serveur (OP)
+    permission: bdeimt.op
+  moderateur:
+    description: Donner ou retirer le role Moderateur (OP)
+    permission: bdeimt.op
+    aliases: [moderateurs]

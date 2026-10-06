@@ -1,0 +1,1 @@
+package com.mojang.brigadier; public interface Command<S> { int SINGLE_SUCCESS = 1; int run(com.mojang.brigadier.context.CommandContext<S> c) throws com.mojang.brigadier.exceptions.CommandSyntaxException; }

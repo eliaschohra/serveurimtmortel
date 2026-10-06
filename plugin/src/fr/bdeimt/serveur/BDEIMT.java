@@ -1,0 +1,362 @@
+package fr.bdeimt.serveur;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public final class BDEIMT extends JavaPlugin {
+   private static BDEIMT instance;
+   private State state;
+   private DataStore data;
+   private Ranks ranks;
+   private Auth auth;
+   private Lobby lobby;
+   private Fly fly;
+   private Votes votes;
+   private Kits kits;
+   private Graves graves;
+   private Teleports teleports;
+   private Social social;
+   private Trade trade;
+   private Moderation moderation;
+   private Announcer announcer;
+   private Dragon dragon;
+   private Motd motd;
+   private Aura aura;
+   private HealthBars healthBars;
+   private Panel panel;
+   private Fun fun;
+   private Maintenance maintenance;
+
+   public static BDEIMT get() {
+      return instance;
+   }
+
+   public State state() {
+      return this.state;
+   }
+
+   public DataStore data() {
+      return this.data;
+   }
+
+   public Ranks ranks() {
+      return this.ranks;
+   }
+
+   public Auth auth() {
+      return this.auth;
+   }
+
+   public Lobby lobby() {
+      return this.lobby;
+   }
+
+   public Fly fly() {
+      return this.fly;
+   }
+
+   public Votes votes() {
+      return this.votes;
+   }
+
+   public Graves graves() {
+      return this.graves;
+   }
+
+   public Announcer announcer() {
+      return this.announcer;
+   }
+
+   public Dragon dragon() {
+      return this.dragon;
+   }
+
+   public Motd motd() {
+      return this.motd;
+   }
+
+   public Fun fun() {
+      return this.fun;
+   }
+
+   public Kits kits() {
+      return this.kits;
+   }
+
+   public Panel panel() {
+      return this.panel;
+   }
+
+   public Maintenance maintenance() {
+      return this.maintenance;
+   }
+
+   public String adminName() {
+      return this.getConfig().getString("admin", "curlybrownhair");
+   }
+
+   public void onEnable() {
+      instance = this;
+      this.saveDefaultConfig();
+      File var1 = new File(this.getDataFolder(), "images");
+      if (!var1.exists() && !var1.mkdirs()) {
+         this.getLogger().warning("Dossier images impossible a creer");
+      }
+
+      if (Bukkit.getPluginManager().getPlugin("AuthMe") != null) {
+         this.getLogger().severe("AuthMe est encore installe : supprime AuthMe*.jar du dossier plugins (BDEIMT gere deja /register et /login).");
+      }
+
+      this.state = new State(this.getDataFolder());
+      this.state.load();
+      this.data = new DataStore(this.getDataFolder());
+      this.data.loadAll();
+      this.ranks = new Ranks(this);
+      this.ranks.setupTeams();
+      this.auth = new Auth(this);
+      this.auth.load();
+      this.auth.prepareAdminCode();
+      this.lobby = new Lobby(this);
+      this.lobby.init();
+      this.fly = new Fly(this);
+      this.votes = new Votes(this);
+      this.kits = new Kits(this);
+      this.graves = new Graves(this);
+      this.graves.load();
+      this.teleports = new Teleports(this);
+      this.social = new Social(this);
+      this.trade = new Trade(this);
+      this.moderation = new Moderation(this);
+      this.announcer = new Announcer(this);
+      this.dragon = new Dragon(this);
+      this.dragon.init();
+      this.motd = new Motd(this);
+      this.motd.loadIcon();
+      this.aura = new Aura(this);
+      this.healthBars = new HealthBars(this);
+      this.healthBars.setupPlayers();
+      this.panel = new Panel(this);
+      this.panel.init();
+      this.fun = new Fun(this);
+      this.fun.init();
+      this.maintenance = new Maintenance(this);
+
+      for (Listener var5 : new Listener[]{
+         this.auth,
+         this.ranks,
+         this.lobby,
+         this.kits,
+         this.graves,
+         this.teleports,
+         this.social,
+         this.trade,
+         this.moderation,
+         this.fly,
+         this.motd,
+         this.aura,
+         this.healthBars,
+         this.panel,
+         this.fun,
+         this.maintenance,
+         new FunItems(),
+         new Menu.Listen()
+      }) {
+         this.getServer().getPluginManager().registerEvents(var5, this);
+      }
+
+      this.cmd("register", this.auth, null);
+      this.cmd("login", this.auth, null);
+      this.cmd("changemdp", this.auth, null);
+      this.cmd("vote", this.votes, null);
+      this.cmd("probavote", this.votes, null);
+      this.cmd("kit", this.kits, this.kits);
+      this.cmd("kits", this.kits, this.kits);
+      this.cmd("guide", this.announcer, null);
+      this.cmd("tombes", this.graves, null);
+      this.cmd("aura", this.aura, null);
+      this.cmd("panel", this.panel, this.panel);
+      this.cmd("maudire", this.panel, this.panel);
+
+      for (String var25 : new String[]{"ghoule", "traq", "oniris", "sugardaddimt", "wei", "tunnel"}) {
+         this.cmd(var25, this.fun, null);
+      }
+
+      this.cmd("listes", this.kits, null);
+
+      for (String var26 : new String[]{"tpa", "tpahere", "tpaccept", "tpdeny", "tpcancel", "tpatoggle", "sethome", "home", "delhome", "homes", "spawn"}) {
+         this.cmd(var26, this.teleports, this.teleports);
+      }
+
+      for (String var27 : new String[]{"msg", "r", "ignore"}) {
+         this.cmd(var27, this.social, this.social);
+      }
+
+      this.cmd("echange", this.trade, this.trade);
+
+      for (String var28 : new String[]{"mute", "unmute", "tempban", "ban", "unban", "kick", "fly"}) {
+         this.cmd(var28, this.moderation, this.moderation);
+      }
+
+      AdminCommand var14 = new AdminCommand(this);
+      this.cmd("imt", var14, var14);
+      this.cmd("maintenance", this.maintenance, this.maintenance);
+      OpCommands var19 = new OpCommands(this, var14);
+      this.cmd("moderateur", var19, var19);
+      Bukkit.getScheduler().runTaskTimer(this, () -> {
+         this.auth.tick();
+         this.fly.tick();
+         this.graves.tick();
+      }, 20L, 20L);
+      Bukkit.getScheduler().runTaskTimer(this, () -> {
+         this.dragon.check();
+         this.data.saveDirty();
+         this.votes.updateSidebar();
+      }, 1200L, 1200L);
+      long var24 = Math.max(1L, this.getConfig().getLong("astuces-toutes-les-minutes", 20L)) * 1200L;
+      long var6 = Math.max(1L, this.getConfig().getLong("rappel-guide-toutes-les-minutes", 120L)) * 1200L;
+      Bukkit.getScheduler().runTaskTimer(this, this.announcer::tip, var24, var24);
+      Bukkit.getScheduler().runTaskTimer(this, this.announcer::guideReminder, var6, var6);
+      this.votes.updateSidebar();
+      this.fixServerSettings();
+
+      for (Player var9 : Bukkit.getOnlinePlayers()) {
+         var9.kick(Msg.mm("<#4FC3FF>Le serveur vient d'être mis à jour.</#4FC3FF>\n<gray>Reconnecte-toi !"));
+      }
+
+      this.getLogger().info("BDEIMT pret : lobby, connexion, votes, kits, tombes, tpa, echanges.");
+   }
+
+   public void onDisable() {
+      try {
+         if (this.trade != null) {
+            this.trade.cancelAll();
+         }
+      } catch (Throwable var6) {
+      }
+
+      try {
+         if (this.healthBars != null) {
+            this.healthBars.clearAll();
+         }
+      } catch (Throwable var5) {
+      }
+
+      try {
+         if (this.graves != null) {
+            this.graves.save();
+            this.graves.hideAll();
+         }
+      } catch (Throwable var4) {
+      }
+
+      try {
+         if (this.data != null) {
+            this.data.saveAll();
+         }
+      } catch (Throwable var3) {
+      }
+
+      try {
+         if (this.state != null) {
+            this.state.save();
+         }
+      } catch (Throwable var2) {
+      }
+   }
+
+   private void cmd(String var1, CommandExecutor var2, TabCompleter var3) {
+      PluginCommand var4 = this.getCommand(var1);
+      if (var4 == null) {
+         this.getLogger().warning("Commande absente de plugin.yml : " + var1);
+      } else {
+         var4.setExecutor(var2);
+         if (var3 != null) {
+            var4.setTabCompleter(var3);
+         }
+      }
+   }
+
+   public Location survivalSpawn() {
+      World var1 = (World)Bukkit.getWorlds().get(0);
+      Location var2 = var1.getSpawnLocation();
+      Block var3 = var2.getBlock();
+      if (var3.getType().isSolid() || var3.getRelative(BlockFace.UP).getType().isSolid() || !var3.getRelative(BlockFace.DOWN).getType().isSolid()) {
+         var3 = var1.getHighestBlockAt(var2).getRelative(BlockFace.UP);
+      }
+
+      return new Location(var1, var3.getX() + 0.5, var3.getY(), var3.getZ() + 0.5, var2.getYaw(), 0.0F);
+   }
+
+   private void fixServerSettings() {
+      boolean var1 = false;
+
+      try {
+         File var2 = new File(this.getServer().getWorldContainer(), "spigot.yml");
+         if (var2.exists()) {
+            YamlConfiguration var3 = YamlConfiguration.loadConfiguration(var2);
+            if (var3.getBoolean("commands.log", true)) {
+               var3.set("commands.log", false);
+               var3.save(var2);
+               var1 = true;
+            }
+         }
+      } catch (Exception var12) {
+         this.getLogger().warning("spigot.yml non modifie : " + var12.getMessage());
+      }
+
+      try {
+         File var13 = new File(this.getServer().getWorldContainer(), "server.properties");
+         if (var13.exists()) {
+            Properties var14 = new Properties();
+            FileReader var4 = new FileReader(var13, StandardCharsets.UTF_8);
+
+            try {
+               var14.load(var4);
+            } catch (Throwable var10) {
+               try {
+                  var4.close();
+               } catch (Throwable var8) {
+                  var10.addSuppressed(var8);
+               }
+
+               throw var10;
+            }
+
+            var4.close();
+            if (!"true".equalsIgnoreCase(var14.getProperty("allow-flight"))) {
+               var14.setProperty("allow-flight", "true");
+
+               try (FileOutputStream var15 = new FileOutputStream(var13)) {
+                  var14.store(var15, "Minecraft server properties");
+               }
+
+               var1 = true;
+            }
+         }
+      } catch (Exception var11) {
+         this.getLogger().warning("server.properties non modifie : " + var11.getMessage());
+      }
+
+      if (var1) {
+         this.getLogger().warning("==============================================================");
+         this.getLogger().warning(" Reglages ajustes (logs sans mots de passe, allow-flight).");
+         this.getLogger().warning(" Redemarre le serveur une fois de plus (/stop) pour les appliquer.");
+         this.getLogger().warning("==============================================================");
+      }
+   }
+}

@@ -1,0 +1,124 @@
+package fr.bdeimt.serveur;
+
+import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+public final class Msg {
+   public static final MiniMessage MM = MiniMessage.miniMessage();
+   public static final String IA_POULPY = "<dark_gray>[</dark_gray><gradient:#4FC3FF:#1E6BFF><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#2E8BFF><bold>Poulpy</bold></#2E8BFF> <dark_gray>»</dark_gray> <#CFEAFF>";
+   public static final String IA_PANTHERE = "<dark_gray>[</dark_gray><gradient:#FF9AC8:#FF2E93><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#FF5FAE><bold>LaPanthèreRose</bold></#FF5FAE> <dark_gray>»</dark_gray> <#FFD6EA>";
+   private static final String OK = "<#55FF88>✔</#55FF88> <gray>";
+   private static final String ERR = "<#FF5555>✖</#FF5555> <#FFB3B3>";
+   private static final String INFO = "<dark_aqua>➜</dark_aqua> <gray>";
+
+   private Msg() {
+   }
+
+   public static Component mm(String var0, TagResolver... var1) {
+      return MM.deserialize(var0, var1);
+   }
+
+   public static TagResolver p(String var0, Object var1) {
+      return Placeholder.unparsed(var0, String.valueOf(var1));
+   }
+
+   public static TagResolver c(String var0, Component var1) {
+      return Placeholder.component(var0, var1);
+   }
+
+   public static void poulpy(Audience var0, String var1, TagResolver... var2) {
+      var0.sendMessage(
+         mm(
+            "<dark_gray>[</dark_gray><gradient:#4FC3FF:#1E6BFF><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#2E8BFF><bold>Poulpy</bold></#2E8BFF> <dark_gray>»</dark_gray> <#CFEAFF>"
+               + var1,
+            var2
+         )
+      );
+   }
+
+   public static void panthere(Audience var0, String var1, TagResolver... var2) {
+      var0.sendMessage(
+         mm(
+            "<dark_gray>[</dark_gray><gradient:#FF9AC8:#FF2E93><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#FF5FAE><bold>LaPanthèreRose</bold></#FF5FAE> <dark_gray>»</dark_gray> <#FFD6EA>"
+               + var1,
+            var2
+         )
+      );
+   }
+
+   public static void ok(Audience var0, String var1, TagResolver... var2) {
+      var0.sendMessage(mm("<#55FF88>✔</#55FF88> <gray>" + var1, var2));
+   }
+
+   public static void err(Audience var0, String var1, TagResolver... var2) {
+      var0.sendMessage(mm("<#FF5555>✖</#FF5555> <#FFB3B3>" + var1, var2));
+   }
+
+   public static void info(Audience var0, String var1, TagResolver... var2) {
+      var0.sendMessage(mm("<dark_aqua>➜</dark_aqua> <gray>" + var1, var2));
+   }
+
+   public static void raw(Audience var0, String var1, TagResolver... var2) {
+      var0.sendMessage(mm(var1, var2));
+   }
+
+   public static void poulpyAll(String var0, TagResolver... var1) {
+      broadcast(
+         mm(
+            "<dark_gray>[</dark_gray><gradient:#4FC3FF:#1E6BFF><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#2E8BFF><bold>Poulpy</bold></#2E8BFF> <dark_gray>»</dark_gray> <#CFEAFF>"
+               + var0,
+            var1
+         )
+      );
+   }
+
+   public static void panthereAll(String var0, TagResolver... var1) {
+      broadcast(
+         mm(
+            "<dark_gray>[</dark_gray><gradient:#FF9AC8:#FF2E93><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#FF5FAE><bold>LaPanthèreRose</bold></#FF5FAE> <dark_gray>»</dark_gray> <#FFD6EA>"
+               + var0,
+            var1
+         )
+      );
+   }
+
+   public static void broadcast(Component var0) {
+      BDEIMT var1 = BDEIMT.get();
+
+      for (Player var3 : Bukkit.getOnlinePlayers()) {
+         if (var1.auth().isLogged(var3)) {
+            var3.sendMessage(var0);
+         }
+      }
+
+      Bukkit.getConsoleSender().sendMessage(var0);
+   }
+
+   public static void staff(String var0, TagResolver... var1) {
+      Component var2 = mm("<dark_gray>[</dark_gray><gold>Staff</gold><dark_gray>]</dark_gray> <gray>" + var0, var1);
+      BDEIMT var3 = BDEIMT.get();
+
+      for (Player var5 : Bukkit.getOnlinePlayers()) {
+         if (var3.auth().isLogged(var5) && var3.ranks().isStaff(var5)) {
+            var5.sendMessage(var2);
+         }
+      }
+
+      Bukkit.getConsoleSender().sendMessage(var2);
+   }
+
+   public static boolean noConsole(CommandSender var0) {
+      if (var0 instanceof Player) {
+         return false;
+      } else {
+         var0.sendMessage("Commande reservee aux joueurs.");
+         return true;
+      }
+   }
+}

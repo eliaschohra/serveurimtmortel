@@ -1,0 +1,21 @@
+# ============================================================
+#  BDEIMT - configuration
+#  Apres une modification : /imt reload (ou /stop pour redemarrer)
+# ============================================================
+
+# Le seul admin du serveur (prefixe [Mobutu])
+admin: curlybrownhair
+
+# Message envoye a chaque connexion
+whatsapp:
+  numero: "+33 6 75 15 77 40"
+  lien: "https://wa.me/33675157740"
+
+# Astuces de Poulpy dans le chat (en minutes)
+astuces-toutes-les-minutes: 20
+
+# Rappel "/guide" de Poulpy (en minutes)
+rappel-guide-toutes-les-minutes: 120
+
+# Reapparition de l'Ender Dragon (en heures)
+dragon-toutes-les-heures: 48
