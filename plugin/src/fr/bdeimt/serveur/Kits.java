@@ -527,6 +527,11 @@ public final class Kits implements CommandExecutor, TabCompleter, Listener {
    }
 
    public long remaining(Player var1, Kits.Kit var2) {
+      // L'admin peut voter pour une liste autant qu'il veut (pour tester les sons).
+      if ("vote".equals(var2.group()) && this.pl.ranks().isAdmin(var1)) {
+         return 0L;
+      }
+
       if (var2.cooldown() <= 0L) {
          return 0L;
       } else {

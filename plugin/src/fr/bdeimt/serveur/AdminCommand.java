@@ -141,8 +141,26 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                   this.pl.state().save();
                   this.pl.votes().updateSidebar();
                   Msg.ok(var1, "Voix des listes remises à zéro.");
+               } else if (var4.length > 2 && this.pl.kits().voteKitIds().contains(var4[1].toLowerCase(Locale.ROOT))) {
+                  // /imt listes <liste> <nombre> | +n | -n
+                  String liste = var4[1].toLowerCase(Locale.ROOT);
+                  int now = this.pl.state().listVotes.getOrDefault(liste, 0);
+                  int value;
+
+                  try {
+                     value = var4[2].startsWith("+") || var4[2].startsWith("-") ? now + Integer.parseInt(var4[2]) : Integer.parseInt(var4[2]);
+                  } catch (NumberFormatException ex) {
+                     Msg.err(var1, "/imt listes <liste> <nombre> (ou +1, -1)");
+                     return true;
+                  }
+
+                  this.pl.state().listVotes.put(liste, Math.max(0, value));
+                  this.pl.state().save();
+                  this.pl.votes().updateSidebar();
+                  Msg.ok(var1, "Liste <white>" + liste + "</white> : " + now + " → <white>" + Math.max(0, value) + "</white> voix.");
                } else {
-                  Msg.info(var1, "<gray>/imt listes reset</gray> — remettre les voix des listes à zéro");
+                  Msg.info(var1, "<gray>/imt listes <liste> <nombre></gray> — fixer les voix d'une liste (ou <white>+1</white>, <white>-1</white>)");
+                  Msg.info(var1, "<gray>/imt listes reset</gray> — remettre toutes les listes à zéro");
                }
                break;
             default:
@@ -170,7 +188,8 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       Msg.raw(var1, " <white>/imt info ‹pseudo›</white> <gray>— fiche d'un joueur");
       Msg.raw(var1, " <white>/imt votes ‹pseudo› ‹nombre›</white> <gray>— corriger des votes · <white>/imt votes reset</white>");
       Msg.raw(var1, " <white>/imt lot ‹id› [pseudo]</white> <gray>— donner un lot du /vote (test)");
-      Msg.raw(var1, " <white>/imt traq ouvrir|fermer</white> <gray>— ouvrir/fermer le Traq · <white>/imt listes reset</white>");
+      Msg.raw(var1, " <white>/imt traq ouvrir|fermer</white> <gray>— ouvrir/fermer le Traq");
+      Msg.raw(var1, " <white>/imt listes ‹liste› ‹nombre|+1|-1›</white> <gray>— voix d'une liste · <white>/imt listes reset</white>");
       Msg.raw(var1, " <white>/imt dragon</white> <gray>— faire renaître le dragon maintenant");
       Msg.raw(var1, " <white>/imt sons ‹lien›</white> <gray>— le pack de sons (lien mc-packs.net)");
       Msg.raw(var1, " <white>/imt lobby</white> <gray>— aller voir le lobby · <white>/imt reload</white> <gray>— recharger images et config");
@@ -732,6 +751,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                   break;
                case "listes":
                   var5.add("reset");
+                  var5.addAll(this.pl.kits().voteKitIds());
                   break;
                case "lot":
                   for (Loots.Loot var19 : this.pl.votes().loots().all()) {

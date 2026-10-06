@@ -1,5 +1,5 @@
 name: BDEIMT
-version: '3.4'
+version: '3.5'
 main: fr.bdeimt.serveur.BDEIMT
 api-version: '1.21'
 author: Elias
