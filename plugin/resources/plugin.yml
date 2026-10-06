@@ -127,6 +127,10 @@ commands:
     description: Un feu d'artifice du WEI
   tunnel:
     description: Raconte une histoire... sans le vouloir (1 fois par heure)
+  parkour:
+    description: Le parkour du mois, son classement
+    usage: /parkour [recommencer]
+    aliases: [pk]
   hub:
     description: Revenir au hub pour changer de monde
     aliases: [lobby, modes]

@@ -244,6 +244,7 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
 
       private void build() {
          Zone[] order = new Zone[]{Zone.SURVIE, Zone.PARKOUR, Zone.SKYHUB, Zone.PARCELLES};
+         // Le nom de la carte du mois s'affiche sur l'icone du parkour.
 
          for (int i = 0; i < order.length && i < SLOTS.length; i++) {
             Zone zone = order[i];

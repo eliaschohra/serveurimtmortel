@@ -320,6 +320,15 @@ public final class Worlds implements Listener {
          this.pl.hub().giveCompass(p);
       }
 
+      if (zone == Zone.PARKOUR) {
+         this.pl.parkour().start(p);
+      } else {
+         try {
+            p.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+         } catch (Throwable t) {
+         }
+      }
+
       if (zone == Zone.SURVIE) {
          this.pl.fly().onLogin(p);
          this.pl.graves().onLogin(p);
