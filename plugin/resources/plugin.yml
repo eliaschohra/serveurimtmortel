@@ -127,6 +127,10 @@ commands:
     description: Un feu d'artifice du WEI
   tunnel:
     description: Raconte une histoire... sans le vouloir (1 fois par heure)
+  parcelle:
+    description: Ta parcelle en creatif
+    usage: /parcelle creer|tp|invite|ban|vote|top|supprimer
+    aliases: [parcelles, plot, p]
   parkour:
     description: Le parkour du mois, son classement
     usage: /parkour [recommencer]

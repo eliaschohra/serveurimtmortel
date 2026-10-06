@@ -48,6 +48,7 @@ public final class BDEIMT extends JavaPlugin {
    private Lists lists;
    private Npcs npcs;
    private Parkour parkour;
+   private Plots plots;
 
    public static BDEIMT get() {
       return instance;
@@ -141,6 +142,10 @@ public final class BDEIMT extends JavaPlugin {
       return this.parkour;
    }
 
+   public Plots plots() {
+      return this.plots;
+   }
+
    public String adminName() {
       return this.getConfig().getString("admin", "curlybrownhair");
    }
@@ -179,6 +184,7 @@ public final class BDEIMT extends JavaPlugin {
       this.npcs = new Npcs(this);
       this.parkour = new Parkour(this);
       this.parkour.load();
+      this.plots = new Plots(this);
       this.fly = new Fly(this);
       this.votes = new Votes(this);
       this.kits = new Kits(this);
@@ -209,6 +215,7 @@ public final class BDEIMT extends JavaPlugin {
       this.hub.decorate();
       this.npcs.spawnAll();
       this.parkour.refreshHologram();
+      this.plots.init();
 
       for (Listener var5 : new Listener[]{
          this.auth,
@@ -232,6 +239,7 @@ public final class BDEIMT extends JavaPlugin {
          this.lists,
          this.npcs,
          this.parkour,
+         this.plots,
          new FunItems(),
          new Menu.Listen()
       }) {
@@ -259,6 +267,7 @@ public final class BDEIMT extends JavaPlugin {
       this.cmd("liste", this.lists, this.lists);
       this.cmd("hub", this.hub, null);
       this.cmd("parkour", this.parkour, this.parkour);
+      this.cmd("parcelle", this.plots, this.plots);
 
       for (String var26 : new String[]{"tpa", "tpahere", "tpaccept", "tpdeny", "tpcancel", "tpatoggle", "sethome", "home", "delhome", "homes", "spawn"}) {
          this.cmd(var26, this.teleports, this.teleports);
@@ -285,6 +294,7 @@ public final class BDEIMT extends JavaPlugin {
          this.graves.tick();
          this.tab.tick();
          this.parkour.tick();
+         this.plots.tick();
       }, 20L, 20L);
       Bukkit.getScheduler().runTaskTimer(this, () -> {
          this.dragon.check();
@@ -330,6 +340,13 @@ public final class BDEIMT extends JavaPlugin {
       try {
          if (this.parkour != null) {
             this.parkour.save();
+         }
+      } catch (Throwable t) {
+      }
+
+      try {
+         if (this.plots != null) {
+            this.plots.save();
          }
       } catch (Throwable t) {
       }
