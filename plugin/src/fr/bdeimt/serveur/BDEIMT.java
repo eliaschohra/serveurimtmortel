@@ -602,7 +602,9 @@ public final class BDEIMT extends JavaPlugin {
          {"pnj.mobutu.aussi-pour-l-admin", true},
          {"pnj.zaza.modele", "classic"},
          {"pnj.mobutu.modele", "classic"},
-         {"mineskin-cle", ""}
+         {"mineskin-cle", ""},
+         {"sons.pack-url", ""},
+         {"sons.pack-sha1", ""}
       };
       boolean var2 = false;
       String var7 = this.getConfig().getString("mondes.skyhub.spawn", "");

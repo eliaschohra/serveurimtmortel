@@ -98,3 +98,16 @@ pnj:
 # Facultatif : une cle d'API MineSkin (mineskin.org) si l'envoi automatique
 # des PNG est refuse pour cause de trop grand nombre de demandes.
 mineskin-cle: ""
+
+# ============================================================
+#  Les sons du BDE
+# ============================================================
+# Un extrait joue quand on prend le kit d'une liste (/vote <liste>),
+# en survie seulement. Les sons voyagent dans un « pack de ressources »
+# que le jeu de chaque joueur telecharge une fois.
+#  pack-url  : l'adresse ou le pack .zip est depose (mc-packs.net par ex.)
+#  pack-sha1 : son empreinte, donnee en meme temps que le pack
+# Vide = pas de pack, pas de son.
+sons:
+  pack-url: ""
+  pack-sha1: ""
