@@ -86,6 +86,19 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
    private final Map<UUID, Parkour.Run> runs = new ConcurrentHashMap<>();
    private volatile String mapName = "Warden Parkour";
    private volatile double floor = -64.0;
+   /** De combien on peut descendre sous son dernier point avant d'y etre ramene. */
+   private volatile double drop = 8.0;
+
+   /**
+    * Les plaques de pression en or du Warden Parkour, relevees dans les
+    * fichiers de la carte : ce sont ses points de controle d'origine. Le
+    * parcours est une tour qui monte, l'ordre du parcours est donc celui des
+    * hauteurs — de la plaque du depart (y = 43) a celle du sommet (y = 231).
+    */
+   private static final int[][] WARDEN_PLATES = new int[][]{
+      {0, 43, -1}, {-36, 50, 18}, {-38, 68, 20}, {-36, 87, 18}, {-36, 105, 18}, {-18, 120, 26},
+      {-5, 135, -13}, {-3, 151, -4}, {0, 167, -24}, {-30, 197, 15}, {-21, 231, 1}
+   };
 
    public Parkour(BDEIMT pl) {
       this.pl = pl;
@@ -102,7 +115,8 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
    public void load() {
       YamlConfiguration yml = YamlConfiguration.loadConfiguration(this.file);
       this.mapName = yml.getString("nom", "Warden Parkour");
-      this.floor = yml.getDouble("plancher", -64.0);
+      this.floor = yml.getDouble("plancher", 10.0);
+      this.drop = yml.getDouble("chute", 8.0);
       this.pointNames.clear();
       this.points.clear();
 
@@ -113,6 +127,29 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
             this.pointNames.add(parts[0]);
             this.points.add(at);
          }
+      }
+
+      // Aucun point pose a la main : on prend les plaques en or de la carte.
+      World w = Bukkit.getWorld(Zone.PARKOUR.world);
+
+      if (this.points.isEmpty() && w != null) {
+         for (int i = 0; i < WARDEN_PLATES.length; i++) {
+            int[] at = WARDEN_PLATES[i];
+            Location here = new Location(w, at[0] + 0.5, at[1], at[2] + 0.5);
+
+            // On regarde vers la plaque suivante en arrivant.
+            int[] next = WARDEN_PLATES[Math.min(i + 1, WARDEN_PLATES.length - 1)];
+            if (next != at) {
+               here.setDirection(new org.bukkit.util.Vector(next[0] - at[0], 0, next[2] - at[2]));
+               here.setPitch(0.0F);
+            }
+
+            this.points.add(here);
+            this.pointNames.add(i == 0 ? "depart" : i == WARDEN_PLATES.length - 1 ? "sommet" : "etape " + i);
+         }
+
+         this.pl.getLogger().info("Parkour : les " + WARDEN_PLATES.length + " plaques en or de la carte servent de points de controle.");
+         this.save();
       }
 
       this.records.clear();
@@ -139,6 +176,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
       YamlConfiguration yml = new YamlConfiguration();
       yml.set("nom", this.mapName);
       yml.set("plancher", this.floor);
+      yml.set("chute", this.drop);
       List<String> lines = new ArrayList<>();
 
       for (int i = 0; i < this.points.size(); i++) {
@@ -204,7 +242,12 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
          return run.checkpoint.clone();
       }
 
-      return this.points.isEmpty() ? null : this.points.get(0).clone();
+      if (!this.points.isEmpty()) {
+         return this.points.get(0).clone();
+      }
+
+      // Toujours un endroit ou revenir, meme sans aucun point de controle.
+      return this.pl.worlds().spawnOf(Zone.PARKOUR, p);
    }
 
    @EventHandler(ignoreCancelled = true)
@@ -216,9 +259,13 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
 
       Location to = e.getTo();
 
-      // Tombe dans le vide : on remonte au dernier point de controle.
-      if (to.getY() < this.floor) {
-         Location back = this.checkpointOf(p);
+      // Tombe : on remonte au dernier point de controle. Les degats etant
+      // coupes dans le parkour, on ne meurt jamais : sans ce retour, on
+      // atterrissait au pied de la tour sans que rien ne se passe.
+      Location last = this.checkpointOf(p);
+
+      if (to.getY() < this.floor || last != null && last.getWorld() == to.getWorld() && to.getY() < last.getY() - this.drop) {
+         Location back = last;
          if (back != null) {
             p.setFallDistance(0.0F);
             p.teleport(back);
@@ -488,6 +535,20 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
                Msg.ok(p, "En dessous de <white>" + Math.round(this.floor) + "</white>, on repart du dernier point.");
                return true;
             }
+            case "chute" -> {
+               if (args.length >= 2) {
+                  try {
+                     this.drop = Math.max(2.0, Double.parseDouble(args[1]));
+                     this.save();
+                  } catch (NumberFormatException ex) {
+                     Msg.err(p, "/parkour chute ‹blocs›");
+                     return true;
+                  }
+               }
+
+               Msg.ok(p, "On est ramené au dernier point quand on tombe de plus de <white>" + Math.round(this.drop) + "</white> blocs sous lui.");
+               return true;
+            }
             case "reset" -> {
                this.records.clear();
                this.save();
@@ -537,7 +598,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
       if (args.length == 1) {
          out.add("recommencer");
          if (sender instanceof Player p && this.pl.ranks().isAdmin(p)) {
-            out.addAll(List.of("point", "annuler", "nom", "plancher", "reset"));
+            out.addAll(List.of("point", "annuler", "nom", "plancher", "chute", "reset"));
          }
 
          String start = args[0].toLowerCase(Locale.ROOT);
