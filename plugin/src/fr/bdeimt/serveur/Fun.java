@@ -241,6 +241,10 @@ public final class Fun implements CommandExecutor, Listener {
       for (Player var2 : Bukkit.getOnlinePlayers()) {
          if (this.pl.auth().isLogged(var2)) {
             Util.sound(var2, "block.note_block.bell", 1.0F, 1.4F);
+
+            if (this.pl.worlds().zoneOf(var2) == Zone.SURVIE) {
+               Msg.big(var2, "<#FFC93C><bold>LE TRAQ EST OUVERT</bold></#FFC93C>", "<gray>une heure, pas une de plus — <white>/traq</white></gray>", 5000L);
+            }
          }
       }
    }

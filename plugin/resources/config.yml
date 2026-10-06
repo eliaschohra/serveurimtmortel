@@ -76,6 +76,8 @@ pnj:
     signature: ""
     position: ""
     modele: "classic"
+    # Le compte admin porte le skin du Mobutu, quel que soit le sien.
+    aussi-pour-l-admin: true
 
 # Facultatif : une cle d'API MineSkin (mineskin.org) si l'envoi automatique
 # des PNG est refuse pour cause de trop grand nombre de demandes.

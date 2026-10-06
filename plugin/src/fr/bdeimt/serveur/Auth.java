@@ -482,6 +482,7 @@ public final class Auth implements Listener, CommandExecutor {
          }
 
          this.pl.tab().refresh(var1);
+         this.pl.skins().applyToAdmin(var1);
       });
       Msg.broadcast(Msg.mm("<#55FF88>+</#55FF88> ").append(this.pl.ranks().display(var1)));
       var1.showTitle(

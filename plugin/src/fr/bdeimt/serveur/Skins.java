@@ -18,6 +18,9 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 
 /**
  * Donner un skin aux PNJ a partir d'un simple fichier PNG.
@@ -157,6 +160,13 @@ public final class Skins {
             this.pl.getConfig().set("pnj." + id + ".empreinte", fingerprint(image));
             this.pl.saveConfig();
             this.pl.npcs().spawn(id);
+
+            if ("mobutu".equals(id)) {
+               for (Player online : Bukkit.getOnlinePlayers()) {
+                  this.applyToAdmin(online);
+               }
+            }
+
             this.say(who, "Skin de " + id + " applique depuis " + image.getName() + ".");
          });
       });
@@ -238,6 +248,52 @@ public final class Skins {
       }
 
       this.pl.getLogger().info(what);
+   }
+
+   /**
+    * Donne au Mobutu — le vrai, le joueur — le skin de son PNJ.
+    *
+    * <p>Le skin pose sur {@code mobutu} s'applique aussi au compte admin, quel
+    * que soit celui que le compte porte d'origine. Paper permet de changer le
+    * profil d'un joueur en cours de partie : tous les clients qui le voient le
+    * re-enregistrent avec le nouveau skin.
+    *
+    * <p>C'est fait deux fois, a une et a dix secondes : SkinsRestorer pose le
+    * sien a l'arrivee, et il faut passer apres lui.
+    */
+   public void applyToAdmin(Player p) {
+      if (p == null || !p.getName().equalsIgnoreCase(this.pl.adminName())) {
+         return;
+      }
+
+      if (!this.pl.getConfig().getBoolean("pnj.mobutu.aussi-pour-l-admin", true)) {
+         return;
+      }
+
+      String texture = this.pl.getConfig().getString("pnj.mobutu.texture", "");
+      String signature = this.pl.getConfig().getString("pnj.mobutu.signature", "");
+
+      if (texture == null || texture.isBlank()) {
+         this.pl.getLogger().info("Pas encore de skin pour le Mobutu : depose mobutu.png dans plugins/BDEIMT/skins/.");
+         return;
+      }
+
+      for (long delay : new long[]{20L, 200L}) {
+         Bukkit.getScheduler().runTaskLater(this.pl, () -> {
+            if (!p.isOnline()) {
+               return;
+            }
+
+            try {
+               PlayerProfile profile = p.getPlayerProfile();
+               profile.removeProperty("textures");
+               profile.setProperty(new ProfileProperty("textures", texture.trim(), signature == null || signature.isBlank() ? null : signature.trim()));
+               p.setPlayerProfile(profile);
+            } catch (Throwable t) {
+               this.pl.getLogger().warning("Skin du Mobutu non applique a " + p.getName() + " : " + t.getMessage());
+            }
+         }, delay);
+      }
    }
 
    /** Le nom du PNJ correspondant a un fichier, ou null. */

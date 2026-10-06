@@ -1,8 +1,11 @@
 package fr.bdeimt.serveur;
 
+import java.time.Duration;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.title.Title;
+import net.kyori.adventure.title.Title.Times;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
@@ -62,6 +65,47 @@ public final class Msg {
 
    public static void info(Audience var0, String var1, TagResolver... var2) {
       var0.sendMessage(mm("<dark_aqua>➜</dark_aqua> <gray>" + var1, var2));
+   }
+
+   /**
+    * Un gros message au milieu de l'ecran, pour ce qu'il ne faut pas rater :
+    * une demande qui attend une reponse, un avertissement avant une action
+    * irreversible, l'ouverture du Traq.
+    *
+    * <p>Le chat defile et se perd ; un titre, non. A reserver aux choses
+    * reellement importantes, sinon plus rien ne ressort.
+    */
+   public static void big(Player var0, String var1, String var2, long var3) {
+      try {
+         var0.showTitle(
+            Title.title(
+               mm(var1),
+               mm(var2),
+               Times.times(Duration.ofMillis(200L), Duration.ofMillis(Math.max(600L, var3)), Duration.ofMillis(600L))
+            )
+         );
+      } catch (Throwable var6) {
+      }
+   }
+
+   /** Le meme, avec un son d'alerte. */
+   public static void alert(Player var0, String var1, String var2) {
+      big(var0, var1, var2, 3500L);
+      Util.sound(var0, "block.note_block.pling", 0.9F, 1.5F);
+   }
+
+   /** Un avertissement avant quelque chose d'irreversible : rouge, et long. */
+   public static void danger(Player var0, String var1, String var2) {
+      big(var0, "<#FF5555><bold>" + var1 + "</bold></#FF5555>", var2, 6000L);
+      Util.sound(var0, "block.note_block.bass", 1.0F, 0.6F);
+   }
+
+   /** Une barre discrete au-dessus de la barre d'objets. */
+   public static void bar(Player var0, String var1, TagResolver... var2) {
+      try {
+         var0.sendActionBar(mm(var1, var2));
+      } catch (Throwable var4) {
+      }
    }
 
    public static void raw(Audience var0, String var1, TagResolver... var2) {

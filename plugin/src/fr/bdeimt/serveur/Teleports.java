@@ -134,7 +134,12 @@ public final class Teleports implements CommandExecutor, TabCompleter, Listener 
                         + "'><hover:show_text:'<red>Refuser'><#FF5555><bold>[Refuser]</bold></#FF5555></hover></click>",
                      Msg.p("n", var1.getName())
                   );
-                  Util.sound(var4, "block.note_block.pling", 0.8F, 1.6F);
+                  Msg.alert(
+                     var4,
+                     "<#4FC3FF><bold>Téléportation</bold></#4FC3FF>",
+                     "<white>" + var1.getName() + "</white> <gray>" + (var3 ? "veut que tu le rejoignes" : "veut venir te voir") + "</gray>"
+                  );
+                  Msg.bar(var4, "<gray>/tpaccept <white>" + var1.getName() + "</white>  ou  /tpdeny <white>" + var1.getName() + "</white></gray>");
                }
             } else {
                Msg.err(var1, "<white><n></white> n'accepte pas les demandes de téléportation.", Msg.p("n", var4.getName()));

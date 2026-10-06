@@ -82,6 +82,8 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    private final BDEIMT pl;
    private final File file;
    private final Map<String, Skyblock.Island> islands = new ConcurrentHashMap<>();
+   /** Invitations en attente : invite -> « case de l'ile|moment ». */
+   private final Map<UUID, String> invites = new ConcurrentHashMap<>();
 
    public Skyblock(BDEIMT pl) {
       this.pl = pl;
@@ -137,6 +139,17 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    public Skyblock.Island islandOf(UUID uuid) {
       for (Skyblock.Island island : this.islands.values()) {
          if (island.owner.equals(uuid)) {
+            return island;
+         }
+      }
+
+      return null;
+   }
+
+   /** L'ile d'un ami sur laquelle on a ete invite, ou null. */
+   public Skyblock.Island guestOf(UUID uuid) {
+      for (Skyblock.Island island : this.islands.values()) {
+         if (island.members.contains(uuid)) {
             return island;
          }
       }
@@ -337,6 +350,9 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
          case "creer", "create", "créer", "nouvelle" -> this.create(p);
          case "tp", "home", "aller" -> this.goHome(p, args);
          case "invite", "inviter" -> this.invite(p, args);
+         case "accept", "accepter", "oui" -> this.accept(p, args);
+         case "refuse", "refuser", "non" -> this.refuse(p);
+         case "quitter", "partir", "leave" -> this.leave(p);
          case "retirer", "kick" -> this.uninvite(p, args);
          case "supprimer", "delete", "reset" -> this.delete(p, args);
          case "hub", "spawn" -> this.pl.worlds().send(p, Zone.SKYHUB);
@@ -352,7 +368,9 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       Msg.raw(p, " <#55FF88>/ile creer</#55FF88> <dark_gray>— fabriquer ton île</dark_gray>");
       Msg.raw(p, " <#55FF88>/ile</#55FF88> <dark_gray>— rentrer chez toi</dark_gray>");
       Msg.raw(p, " <#55FF88>/ile tp</#55FF88> <gray>‹joueur›</gray> <dark_gray>— aller chez quelqu'un</dark_gray>");
-      Msg.raw(p, " <#55FF88>/ile invite</#55FF88> <gray>‹joueur›</gray> <dark_gray>— l'autoriser a construire</dark_gray>");
+      Msg.raw(p, " <#55FF88>/ile invite</#55FF88> <gray>‹joueur›</gray> <dark_gray>— l'inviter a te rejoindre</dark_gray>");
+      Msg.raw(p, " <#55FF88>/ile accept</#55FF88> <dark_gray>— accepter une invitation</dark_gray>");
+      Msg.raw(p, " <#55FF88>/ile quitter</#55FF88> <dark_gray>— repartir de l'île d'un ami</dark_gray>");
       Msg.raw(p, " <#55FF88>/ile hub</#55FF88> <dark_gray>— la place centrale : fermes, mine, marché</dark_gray>");
       Msg.raw(p, " <#55FF88>/ile supprimer confirmer</#55FF88> <dark_gray>— repartir de zéro</dark_gray>");
    }
@@ -361,6 +379,14 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       if (this.islandOf(p.getUniqueId()) != null) {
          Msg.err(p, "Tu as déjà une île. Une seule par personne !");
          Msg.info(p, "Pour repartir de zéro : <white>/ile supprimer confirmer</white>.");
+         return;
+      }
+
+      Skyblock.Island host = this.guestOf(p.getUniqueId());
+
+      if (host != null) {
+         Msg.err(p, "Tu habites sur l'île de <white>" + host.ownerName + "</white>.");
+         Msg.info(p, "Quitte-la d'abord avec <white>/ile quitter</white>, puis refais <white>/ile creer</white>.");
          return;
       }
 
@@ -423,6 +449,13 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       }
    }
 
+   /**
+    * Invite quelqu'un a venir habiter sur son ile.
+    *
+    * <p>Rejoindre l'ile d'un ami n'est pas anodin : on ne peut pas habiter
+    * chez quelqu'un et garder son ile a soi. Si l'invite en a une, elle sera
+    * effacee — on le lui dit en gros a l'ecran, et il doit confirmer.
+    */
    private void invite(Player p, String[] args) {
       Skyblock.Island island = this.islandOf(p.getUniqueId());
 
@@ -443,15 +476,155 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
          return;
       }
 
+      if (target.equals(p)) {
+         Msg.err(p, "Tu es déjà chez toi.");
+         return;
+      }
+
+      if (island.members.contains(target.getUniqueId())) {
+         Msg.err(p, "<white>" + target.getName() + "</white> habite déjà chez toi.");
+         return;
+      }
+
       if (island.members.size() + 1 >= MAX_MEMBERS) {
          Msg.err(p, "Ton île est pleine (" + MAX_MEMBERS + " personnes au total).");
          return;
       }
 
-      island.members.add(target.getUniqueId());
+      this.invites.put(target.getUniqueId(), island.key() + "|" + System.currentTimeMillis());
+      Skyblock.Island theirs = this.islandOf(target.getUniqueId());
+      Msg.ok(p, "Invitation envoyée à <white>" + target.getName() + "</white>.");
+
+      if (theirs != null) {
+         Msg.info(p, "<gray>Il a déjà une île : s'il accepte, elle sera effacée. Il en est prévenu.</gray>");
+      }
+
+      Msg.raw(
+         target,
+         "<dark_gray>» </dark_gray><white>" + p.getName() + "</white> <gray>t'invite à venir habiter sur son île.</gray>"
+      );
+
+      if (theirs == null) {
+         Msg.alert(target, "<#7FE3FF><bold>Invitation</bold></#7FE3FF>", "<white>" + p.getName() + "</white> <gray>t'invite sur son île</gray>");
+         Msg.raw(target, "<gray>   <click:run_command:'/ile accept'><#55FF88>[Accepter]</#55FF88></click>   <click:run_command:'/ile refuse'><#FF5555>[Refuser]</#FF5555></click>");
+      } else {
+         Msg.danger(target, "ATTENTION", "<#FFB3B3>accepter effacera ton île définitivement</#FFB3B3>");
+         Msg.raw(target, "<#FF5555>⚠ Tu as déjà une île. On ne peut pas habiter chez quelqu'un et garder la sienne.</#FF5555>");
+         Msg.raw(target, "<#FFB3B3>   Accepter effacera <bold>toute ta construction</bold>, sans retour possible.</#FFB3B3>");
+         Msg.raw(target, "<gray>   <click:run_command:'/ile accept'><#FFD25E>[J'ai compris, voir la suite]</#FFD25E></click>   <click:run_command:'/ile refuse'><#55FF88>[Garder mon île]</#55FF88></click>");
+      }
+
+      Util.sound(target, "entity.experience_orb.pickup", 0.8F, 1.2F);
+   }
+
+   /** Accepte une invitation. Deux fois, si cela doit effacer sa propre ile. */
+   private void accept(Player p, String[] args) {
+      String pending = this.invites.get(p.getUniqueId());
+
+      if (pending == null) {
+         Msg.err(p, "Aucune invitation en attente.");
+         return;
+      }
+
+      String[] parts = pending.split("\\|");
+
+      if (parts.length > 1 && System.currentTimeMillis() - Long.parseLong(parts[1]) > 300000L) {
+         this.invites.remove(p.getUniqueId());
+         Msg.err(p, "Cette invitation a expiré.");
+         return;
+      }
+
+      Skyblock.Island island = this.islands.get(parts[0]);
+
+      if (island == null) {
+         this.invites.remove(p.getUniqueId());
+         Msg.err(p, "Cette île n'existe plus.");
+         return;
+      }
+
+      if (island.members.size() + 1 >= MAX_MEMBERS) {
+         Msg.err(p, "Cette île est pleine.");
+         return;
+      }
+
+      Skyblock.Island mine = this.islandOf(p.getUniqueId());
+      boolean confirmed = args.length >= 2 && args[1].equalsIgnoreCase("confirmer");
+
+      if (mine != null && !confirmed) {
+         Msg.danger(p, "DERNIER AVERTISSEMENT", "<#FFB3B3>ton île va être effacée</#FFB3B3>");
+         Msg.raw(p, "<dark_gray>" + "─".repeat(42) + "</dark_gray>");
+         Msg.raw(p, "<#FF5555><bold>  Ton île " + mine.key() + " sera effacée, et tout ce qu'il y a dessus.</bold></#FF5555>");
+         Msg.raw(p, "<#FFB3B3>  Coffres, constructions, animaux : tout disparaît.</#FFB3B3>");
+         Msg.raw(p, "<#FFB3B3>  Il n'y a aucun moyen de revenir en arrière.</#FFB3B3>");
+         Msg.raw(p, "<gray>  Si tu es sûr : <click:run_command:'/ile accept confirmer'><#FF5555>[/ile accept confirmer]</#FF5555></click></gray>");
+         Msg.raw(p, "<gray>  Sinon : <click:run_command:'/ile refuse'><#55FF88>[/ile refuse]</#55FF88></click></gray>");
+         Msg.raw(p, "<dark_gray>" + "─".repeat(42) + "</dark_gray>");
+         return;
+      }
+
+      this.invites.remove(p.getUniqueId());
+
+      if (mine != null) {
+         this.wipe(mine);
+         this.islands.remove(mine.key());
+         Msg.err(p, "Ton ancienne île est en train d'être effacée.");
+      }
+
+      island.members.add(p.getUniqueId());
       this.save();
-      Msg.ok(p, "<white>" + target.getName() + "</white> peut maintenant construire sur ton île.");
-      Msg.poulpy(target, "<white>" + p.getName() + "</white> t'ouvre son île. <gray>(/ile tp " + p.getName() + ")</gray>");
+      Location home = this.home(island);
+
+      if (this.pl.worlds().zoneOf(p) != Zone.SKYBLOCK) {
+         this.pl.worlds().send(p, Zone.SKYBLOCK);
+      }
+
+      if (home != null) {
+         p.teleport(home);
+      }
+
+      Msg.ok(p, "Te voilà chez <white>" + island.ownerName + "</white>.");
+      Player owner = Bukkit.getPlayer(island.owner);
+
+      if (owner != null) {
+         Msg.ok(owner, "<white>" + p.getName() + "</white> a rejoint ton île.");
+         Msg.alert(owner, "<#55FF88><bold>+ " + p.getName() + "</bold></#55FF88>", "<gray>a rejoint ton île</gray>");
+      }
+
+      Util.sound(p, "entity.player.levelup", 0.7F, 1.4F);
+   }
+
+   private void refuse(Player p) {
+
+      if (this.invites.remove(p.getUniqueId()) == null) {
+         Msg.err(p, "Aucune invitation en attente.");
+      } else {
+         Msg.ok(p, "Invitation refusée. Tu gardes ton île.");
+      }
+   }
+
+   /** Repartir de chez un ami, pour pouvoir refaire son ile a soi. */
+   private void leave(Player p) {
+      Skyblock.Island host = this.guestOf(p.getUniqueId());
+
+      if (host == null) {
+         Msg.err(p, "Tu n'habites chez personne.");
+         return;
+      }
+
+      host.members.remove(p.getUniqueId());
+      this.save();
+      Msg.ok(p, "Tu as quitté l'île de <white>" + host.ownerName + "</white>. <gray>/ile creer pour refaire la tienne.</gray>");
+      Player owner = Bukkit.getPlayer(host.owner);
+
+      if (owner != null) {
+         Msg.info(owner, "<white>" + p.getName() + "</white> a quitté ton île.");
+      }
+
+      Location hub = this.pl.worlds().spawnOf(Zone.SKYHUB, p);
+
+      if (hub != null && this.pl.worlds().available(Zone.SKYHUB)) {
+         this.pl.worlds().send(p, Zone.SKYHUB);
+      }
    }
 
    private void uninvite(Player p, String[] args) {
@@ -578,7 +751,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       List<String> out = new ArrayList<>();
 
       if (args.length == 1) {
-         out.addAll(List.of("creer", "tp", "invite", "retirer", "hub", "info", "supprimer"));
+         out.addAll(List.of("creer", "tp", "invite", "accept", "refuse", "quitter", "retirer", "hub", "info", "supprimer"));
          String start = args[0].toLowerCase(Locale.ROOT);
          out.removeIf(s -> !s.startsWith(start));
       } else if (args.length == 2) {

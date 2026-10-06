@@ -145,7 +145,12 @@ public final class Trade implements CommandExecutor, TabCompleter, Listener {
                      + "'><hover:show_text:'<red>Refuser'><#FF5555><bold>[Refuser]</bold></#FF5555></hover></click>",
                   Msg.p("n", var1.getName())
                );
-               Util.sound(var3, "block.note_block.pling", 0.8F, 1.3F);
+               Msg.alert(
+                  var3,
+                  "<#FFC93C><bold>Échange</bold></#FFC93C>",
+                  "<white>" + var1.getName() + "</white> <gray>te propose un échange</gray>"
+               );
+               Msg.bar(var3, "<gray>/echange accepter <white>" + var1.getName() + "</white></gray>");
             }
          }
       }
