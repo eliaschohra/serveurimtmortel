@@ -2,3 +2,4 @@ build/out/
 build/deps/jars/
 build/deps/target/
 livraison/*.jar
+livraison/*.zip
