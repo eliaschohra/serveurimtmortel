@@ -101,6 +101,12 @@ public final class Worlds implements Listener {
       }
 
       if (new File(folder, "level.dat").exists()) {
+         if (new File(folder, "DIM-1").isDirectory() || new File(folder, "DIM1").isDirectory()) {
+            return "Carte faite en solo : ses dossiers DIM-1 et DIM1 empechent le serveur de la convertir."
+               + " Ils sont vides, supprime-les par FileZilla, ou tape /imt monde charger "
+               + zone.name().toLowerCase(java.util.Locale.ROOT) + ".";
+         }
+
          return "Dossier present mais monde non charge : regarde la console au demarrage.";
       }
 
@@ -169,6 +175,73 @@ public final class Worlds implements Listener {
       return true;
    }
 
+   /**
+    * Prepare le dossier d'un monde telecharge avant de le confier au serveur.
+    *
+    * <p>Une carte faite en solo est un monde « a l'ancienne » : son Nether et
+    * son End sont ranges dans des sous-dossiers {@code DIM-1} et {@code DIM1}.
+    * Un serveur, lui, en fait des mondes separes, et il essaie donc de
+    * convertir le dossier au chargement. Quand cette conversion echoue, le
+    * serveur refuse le monde entier — c'est le « Failed to migrate legacy
+    * world » qu'on voit dans la console.
+    *
+    * <p>Pour les cartes qui nous interessent — un lobby, un parkour — ces deux
+    * dossiers ne contiennent aucun terrain, seulement quelques fichiers de
+    * comptabilite vides : le Nether et l'End n'y ont jamais ete visites. On
+    * les met donc de cote, et le monde se charge comme un monde ordinaire.
+    *
+    * <p>Rien n'est supprime : tout part dans un dossier voisin, au cas ou.
+    */
+   private void prepare(Zone zone) {
+      File folder = new File(Bukkit.getWorldContainer(), zone.world);
+
+      if (!new File(folder, "level.dat").exists()) {
+         return;
+      }
+
+      File aside = new File(Bukkit.getWorldContainer(), zone.world + "_dimensions-mises-de-cote");
+      int moved = 0;
+
+      for (String name : new String[]{"DIM-1", "DIM1"}) {
+         File dim = new File(folder, name);
+
+         if (!dim.isDirectory()) {
+            continue;
+         }
+
+         if (!aside.exists() && !aside.mkdirs()) {
+            this.pl.getLogger().warning("Impossible de creer " + aside.getName() + " : enleve " + name + " a la main par FileZilla.");
+            return;
+         }
+
+         File target = new File(aside, name + "-" + System.currentTimeMillis());
+
+         if (dim.renameTo(target)) {
+            moved++;
+         } else {
+            this.pl.getLogger().warning(
+               "Impossible de deplacer " + zone.world + "/" + name + " : supprime ce dossier a la main par FileZilla, il est vide."
+            );
+         }
+      }
+
+      // Une conversion ratee laisse parfois des mondes voisins incomplets, qui
+      // font echouer la suivante : on les ecarte aussi.
+      for (String suffix : new String[]{"_nether", "_the_end"}) {
+         File leftover = new File(Bukkit.getWorldContainer(), zone.world + suffix);
+
+         if (leftover.isDirectory() && !new File(leftover, "level.dat").exists()) {
+            if (leftover.renameTo(new File(Bukkit.getWorldContainer(), zone.world + suffix + "-rate-" + System.currentTimeMillis()))) {
+               moved++;
+            }
+         }
+      }
+
+      if (moved > 0) {
+         this.pl.getLogger().info(zone.world + " : " + moved + " dossier(s) de dimension mis de cote, le monde peut etre charge.");
+      }
+   }
+
    /** Charge un monde en cours de partie, sans redemarrer. */
    public boolean loadNow(Zone zone) {
       this.load(zone);
@@ -185,6 +258,7 @@ public final class Worlds implements Listener {
       // le monde se retrouve dans bdeimt_hub/Empty/ au lieu de bdeimt_hub/.
       // On remet ca a plat tout seul plutot que d'afficher « monde absent ».
       this.unnest(zone);
+      this.prepare(zone);
 
       File folder = new File(Bukkit.getWorldContainer(), zone.world);
       if (!new File(folder, "level.dat").exists()) {
