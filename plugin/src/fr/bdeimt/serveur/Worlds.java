@@ -65,6 +65,116 @@ public final class Worlds implements Listener {
       this.load(Zone.PARKOUR);
    }
 
+   /**
+    * Dit, en francais, ce que le plugin trouve sur le disque pour cette zone.
+    * C'est la reponse a « j'ai depose le dossier et ca ne marche pas ».
+    */
+   public String diagnose(Zone zone) {
+      if (zone.world == null) {
+         return "Monde principal du serveur.";
+      }
+
+      if (Bukkit.getWorld(zone.world) != null) {
+         return "Charge.";
+      }
+
+      File folder = new File(Bukkit.getWorldContainer(), zone.world);
+
+      if (!folder.exists()) {
+         File[] siblings = Bukkit.getWorldContainer().listFiles(File::isDirectory);
+         StringBuilder near = new StringBuilder();
+
+         if (siblings != null) {
+            for (File sibling : siblings) {
+               if (sibling.getName().toLowerCase(java.util.Locale.ROOT).replace(" ", "").replace("-", "").replace("_", "")
+                     .contains(zone.world.replace("bdeimt_", ""))) {
+                  near.append(" J'y vois « ").append(sibling.getName()).append(" » : renomme-le exactement « ").append(zone.world).append(" ».");
+               }
+            }
+         }
+
+         return "Dossier introuvable dans " + Bukkit.getWorldContainer().getPath() + "." + near;
+      }
+
+      if (!folder.isDirectory()) {
+         return zone.world + " existe mais ce n'est pas un dossier.";
+      }
+
+      if (new File(folder, "level.dat").exists()) {
+         return "Dossier present mais monde non charge : regarde la console au demarrage.";
+      }
+
+      File nested = nestedWorld(folder);
+
+      if (nested != null) {
+         return "Le dossier contient un autre dossier (« " + nested.getName()
+            + " ») qui est le vrai monde. Il faut remonter son contenu d'un cran. Le plugin peut le faire : /imt monde charger "
+            + zone.name().toLowerCase(java.util.Locale.ROOT);
+      }
+
+      return "Dossier present mais il n'y a pas de level.dat dedans : ce n'est pas un monde Minecraft.";
+   }
+
+   /** Un dossier de monde pose par erreur a l'interieur d'un autre. */
+   private static File nestedWorld(File folder) {
+      File[] children = folder.listFiles(File::isDirectory);
+
+      if (children == null) {
+         return null;
+      }
+
+      File found = null;
+
+      for (File child : children) {
+         if (new File(child, "level.dat").exists()) {
+            if (found != null) {
+               return null;
+            }
+
+            found = child;
+         }
+      }
+
+      return found;
+   }
+
+   /**
+    * Remonte d'un cran le contenu d'un monde depose dans un sous-dossier.
+    * C'est l'erreur classique : decompresser une archive cree un niveau de
+    * plus, et Minecraft ne trouve plus le monde.
+    */
+   public boolean unnest(Zone zone) {
+      File folder = new File(Bukkit.getWorldContainer(), zone.world);
+      File nested = nestedWorld(folder);
+
+      if (nested == null || new File(folder, "level.dat").exists()) {
+         return false;
+      }
+
+      File[] content = nested.listFiles();
+
+      if (content == null) {
+         return false;
+      }
+
+      for (File file : content) {
+         if (!file.renameTo(new File(folder, file.getName()))) {
+            this.pl.getLogger().warning("Impossible de deplacer " + file.getName() + " : fais-le a la main par FileZilla.");
+            return false;
+         }
+      }
+
+      nested.delete();
+      this.pl.getLogger().info("Contenu de " + zone.world + "/" + nested.getName() + " remonte d'un cran.");
+      return true;
+   }
+
+   /** Charge un monde en cours de partie, sans redemarrer. */
+   public boolean loadNow(Zone zone) {
+      this.load(zone);
+      return this.available(zone);
+   }
+
    private void load(Zone zone) {
       if (Bukkit.getWorld(zone.world) != null) {
          this.tune(zone);
@@ -73,10 +183,7 @@ public final class Worlds implements Listener {
 
       File folder = new File(Bukkit.getWorldContainer(), zone.world);
       if (!new File(folder, "level.dat").exists()) {
-         this.pl.getLogger().warning(
-            "Monde absent : " + zone.world + " — depose le dossier dans " + Bukkit.getWorldContainer().getPath()
-               + " (ce mode de jeu s'affichera « bientot disponible »)."
-         );
+         this.pl.getLogger().warning("Monde absent : " + zone.world + " — " + this.diagnose(zone));
          return;
       }
 

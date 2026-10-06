@@ -277,9 +277,54 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                   + "</" + zone.color.substring(1, zone.color.length() - 1) + "> <dark_gray>(" + (zone.world == null ? "monde principal" : zone.world)
                   + ")</dark_gray> <gray>" + (open ? this.pl.worlds().count(zone) + " joueur(s)" : "monde absent") + "</gray>"
             );
+
+            if (!open) {
+               Msg.raw(sender, "    <#FFB3B3>" + this.pl.worlds().diagnose(zone).replace("<", "‹").replace(">", "›") + "</#FFB3B3>");
+            }
          }
 
          Msg.info(sender, "<white>/imt monde spawn ‹zone›</white> pour fixer le point d'arrivee la ou tu es.");
+         Msg.info(sender, "<white>/imt monde charger ‹zone›</white> pour reessayer de charger un monde depose.");
+         return;
+      }
+
+      // Charger un monde sans redemarrer, en reparant au passage l'erreur
+      // classique du dossier depose dans un autre dossier.
+      if (args[1].equalsIgnoreCase("charger") || args[1].equalsIgnoreCase("load")) {
+         if (args.length < 3) {
+            Msg.err(sender, "/imt monde charger ‹zone›");
+            return;
+         }
+
+         Zone wanted = parseZone(args[2]);
+
+         if (wanted == null || wanted.world == null) {
+            Msg.err(sender, "Zone inconnue.");
+            return;
+         }
+
+         if (this.pl.worlds().available(wanted)) {
+            Msg.info(sender, "Ce monde est deja charge.");
+            return;
+         }
+
+         if (this.pl.worlds().unnest(wanted)) {
+            Msg.ok(sender, "Le dossier etait emboite dans un autre : remis a plat.");
+         }
+
+         if (this.pl.worlds().loadNow(wanted)) {
+            Msg.ok(sender, "Monde <white>" + wanted.world + "</white> charge. Il apparait dans la boussole.");
+
+            if (wanted == Zone.HUB) {
+               this.pl.hub().decorate();
+               this.pl.npcs().spawnAll();
+            } else if (wanted == Zone.PARKOUR) {
+               this.pl.parkour().refreshHologram();
+            }
+         } else {
+            Msg.err(sender, this.pl.worlds().diagnose(wanted).replace("<", "‹").replace(">", "›"));
+         }
+
          return;
       }
 
