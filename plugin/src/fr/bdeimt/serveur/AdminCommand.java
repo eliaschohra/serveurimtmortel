@@ -31,6 +31,11 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "reload":
                this.pl.reloadConfig();
                this.pl.lobby().decorate();
+               this.pl.lobby().decorateHub();
+               this.pl.hub().decorate();
+               this.pl.skyhub().decorate();
+               this.pl.shops().load();
+               this.pl.shops().spawnAll();
                this.pl.motd().loadIcon();
                this.pl.fun().loadStories();
                this.pl.votes().updateSidebar();
@@ -55,6 +60,29 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                break;
             case "aura":
                this.aura(var1, var4);
+               break;
+            case "mode":
+               this.mode(var1, var4);
+               break;
+            case "marchand":
+            case "marchands":
+               this.merchant(var1, var4);
+               break;
+            case "solde":
+               this.money(var1, var4);
+               break;
+            case "hologramme":
+               if (Msg.noConsole(var1)) {
+                  return true;
+               }
+
+               if (this.pl.worlds().zoneOf((Player)var1) != Zone.SKYHUB) {
+                  Msg.err(var1, "Place-toi dans le lobby du skyblock, la ou doit flotter le panneau.");
+                  return true;
+               }
+
+               this.pl.skyhub().moveHologram(((Player)var1).getLocation());
+               Msg.ok(var1, "Panneau du skyblock deplace ici.");
                break;
             case "resetmdp":
                if (var4.length < 2) {
@@ -458,6 +486,120 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       Msg.ok(sender, "<white>" + id + "</white> est pose ici.");
    }
 
+   /** {@code /imt mode ‹survie|parkour|skyblock|parcelles› on|off} : ouvrir ou fermer un mode. */
+   private void mode(CommandSender sender, String[] args) {
+      if (args.length < 3) {
+         for (String group : new String[]{"survie", "parkour", "skyblock", "parcelles"}) {
+            boolean on = this.pl.getConfig().getBoolean("modes." + group, true);
+            Msg.raw(sender, " " + (on ? "<#55FF88>●</#55FF88>" : "<#FF5555>●</#FF5555>") + " <white>" + group + "</white> <gray>" + (on ? "ouvert" : "ferme") + "</gray>");
+         }
+
+         Msg.info(sender, "<white>/imt mode ‹mode› on|off</white>, puis <white>/stop</white> pour l'appliquer.");
+         return;
+      }
+
+      String group = args[1].toLowerCase(Locale.ROOT);
+
+      if (!List.of("survie", "parkour", "skyblock", "parcelles").contains(group)) {
+         Msg.err(sender, "Modes : survie, parkour, skyblock, parcelles.");
+         return;
+      }
+
+      boolean on = args[2].equalsIgnoreCase("on") || args[2].equalsIgnoreCase("ouvrir") || args[2].equalsIgnoreCase("true");
+      this.pl.getConfig().set("modes." + group, on);
+      this.pl.saveConfig();
+      Msg.ok(sender, "Mode <white>" + group + "</white> " + (on ? "ouvert" : "ferme") + ". <gray>Tape /stop pour l'appliquer (ses mondes se chargent au demarrage).</gray>");
+   }
+
+   /** {@code /imt marchand ‹nom›|liste|retirer ‹nom›} : poser les marchands du skyblock. */
+   private void merchant(CommandSender sender, String[] args) {
+      if (args.length < 2 || args[1].equalsIgnoreCase("liste")) {
+         Msg.raw(sender, "<dark_gray>———— <#FFD25E>Les marchands</#FFD25E> ————</dark_gray>");
+
+         for (Shops.Shop shop : this.pl.shops().all().values()) {
+            boolean placed = this.pl.shops().position(shop.id()) != null;
+            Msg.raw(
+               sender,
+               " " + (placed ? "<#55FF88>●</#55FF88>" : "<dark_gray>●</dark_gray>") + " <white>" + shop.id() + "</white> <gray>— "
+                  + shop.name() + ", " + shop.offers().size() + " offres" + (placed ? "" : ", pas encore pose") + "</gray>"
+            );
+         }
+
+         Msg.info(sender, "<white>/imt marchand ‹nom›</white> le pose la ou tu es, <white>/imt marchand retirer ‹nom›</white> l'enleve.");
+         Msg.info(sender, "<gray>Les prix se changent dans plugins/BDEIMT/marchands.yml, puis /imt reload.</gray>");
+         return;
+      }
+
+      if (args[1].equalsIgnoreCase("retirer")) {
+         if (args.length < 3 || !this.pl.shops().all().containsKey(args[2].toLowerCase(Locale.ROOT))) {
+            Msg.err(sender, "/imt marchand retirer ‹nom›  —  /imt marchand liste");
+            return;
+         }
+
+         this.pl.shops().unplace(args[2].toLowerCase(Locale.ROOT));
+         Msg.ok(sender, "Marchand retire.");
+         return;
+      }
+
+      String id = args[1].toLowerCase(Locale.ROOT);
+
+      if (!this.pl.shops().all().containsKey(id)) {
+         Msg.err(sender, "Marchand inconnu. <white>/imt marchand liste</white>");
+         return;
+      }
+
+      if (Msg.noConsole(sender)) {
+         return;
+      }
+
+      Player p = (Player)sender;
+
+      if (!this.pl.worlds().zoneOf(p).group.equals(Zone.SKYBLOCK.group)) {
+         Msg.err(p, "Les marchands vivent dans le skyblock : place-toi la-bas d'abord.");
+         return;
+      }
+
+      this.pl.shops().place(id, p.getLocation());
+      Msg.ok(p, "<white>" + this.pl.shops().all().get(id).name() + "</white> est pose ici. Il y restera.");
+   }
+
+   /** {@code /imt solde ‹joueur› set|add ‹n›} : l'argent du skyblock a la main. */
+   private void money(CommandSender sender, String[] args) {
+      if (args.length < 2) {
+         Msg.err(sender, "/imt solde ‹joueur› [set|add ‹n›]");
+         return;
+      }
+
+      PlayerData data = this.pl.data().byName(args[1]);
+
+      if (data == null) {
+         Msg.err(sender, "Joueur inconnu.");
+         return;
+      }
+
+      if (args.length >= 4) {
+         long n = Economy.parseAmount(args[3]);
+
+         if (n < 0L) {
+            Msg.err(sender, "Montant invalide.");
+            return;
+         }
+
+         if (args[2].equalsIgnoreCase("set")) {
+            this.pl.economy().set(data.uuid, n);
+         } else if (args[2].equalsIgnoreCase("add")) {
+            this.pl.economy().give(data.uuid, n);
+         } else {
+            Msg.err(sender, "set ou add.");
+            return;
+         }
+
+         this.pl.data().save(data);
+      }
+
+      Msg.info(sender, "Solde de <white>" + data.name + "</white> : <#FFD25E>" + Economy.format(data.money) + "</#FFD25E>.");
+   }
+
    /** {@code /imt aura ‹joueur› set|add|reset [nombre]} : l'aura a la main. */
    private void aura(CommandSender sender, String[] args) {
       if (args.length < 3) {
@@ -574,7 +716,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
          return var5;
       } else {
          if (var4.length == 1) {
-            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo", "aura"));
+            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo", "aura", "marchand", "solde", "hologramme", "mode"));
          } else if (var4.length == 2) {
             String var10 = var4[0].toLowerCase(Locale.ROOT);
             switch (var10) {

@@ -200,8 +200,11 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
 
       // Sous la carte du lobby : on remonte au point d'arrivee. Les degats y
       // sont coupes, donc sans ca on tomberait dans le vide indefiniment.
-      if (e.getTo().getY() < e.getTo().getWorld().getMinHeight() - 5 && this.pl.worlds().zoneOf(p) == Zone.HUB) {
-         Location back = this.pl.auth().isLogged(p) ? this.pl.worlds().spawnOf(Zone.HUB, p) : this.pl.lobby().loginSpawn();
+      Zone here = this.pl.worlds().zoneOf(p);
+
+      if (e.getTo().getY() < e.getTo().getWorld().getMinHeight() - 5 && (here == Zone.HUB || here == Zone.SKYHUB)) {
+         Location back = here == Zone.SKYHUB ? this.pl.worlds().spawnOf(Zone.SKYHUB, p)
+            : this.pl.auth().isLogged(p) ? this.pl.worlds().spawnOf(Zone.HUB, p) : this.pl.lobby().loginSpawn();
 
          if (back != null) {
             p.setFallDistance(0.0F);
@@ -558,7 +561,7 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
          return switch (zone) {
             case SURVIE -> "La survie du serveur, avec tout ce qu'on y a construit.";
             case PARKOUR -> "Le parkour du mois : " + this.pl.parkour().mapName() + ".";
-            case SKYHUB, SKYBLOCK -> "Ton ile, tes fermes, le marche commun.";
+            case SKYHUB, SKYBLOCK -> "Ton île, les marchands et le marché.";
             case PARCELLES -> "Une parcelle en creatif, rien que pour toi.";
             default -> "";
          };

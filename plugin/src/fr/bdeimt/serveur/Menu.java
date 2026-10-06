@@ -39,6 +39,15 @@ public abstract class Menu implements InventoryHolder {
 
    public abstract void click(Player var1, int var2);
 
+   /**
+    * Le meme, en sachant comment on a clique. Les menus qui achetent et
+    * vendent s'en servent : gauche pour acheter, droit pour vendre, Maj pour
+    * en faire plus d'un coup.
+    */
+   public void click(Player var1, int var2, org.bukkit.event.inventory.ClickType var3) {
+      this.click(var1, var2);
+   }
+
    public static final class Listen implements Listener {
       @EventHandler
       public void onClick(InventoryClickEvent var1) {
@@ -46,10 +55,11 @@ public abstract class Menu implements InventoryHolder {
             var1.setCancelled(true);
             if (var1.getWhoClicked() instanceof Player var5) {
                int var6 = var1.getRawSlot();
+               org.bukkit.event.inventory.ClickType var7 = var1.getClick();
                if (var6 >= 0 && var6 < var1.getView().getTopInventory().getSize()) {
                   Bukkit.getScheduler().runTask(BDEIMT.get(), () -> {
                      if (var5.isOnline()) {
-                        var2.click(var5, var6);
+                        var2.click(var5, var6, var7);
                      }
                   });
                }

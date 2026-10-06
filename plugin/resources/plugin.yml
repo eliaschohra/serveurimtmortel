@@ -135,8 +135,16 @@ commands:
     usage: /ile creer|tp|invite|hub|supprimer
     aliases: [island, is, skyblock, "île"]
   marche:
-    description: Le marche du hub skyblock
-    aliases: ["marché", "marchand"]
+    description: Le marche du skyblock, entre joueurs
+    usage: /marche [vendre <prix>]
+    aliases: ["marché"]
+  solde:
+    description: Ton argent dans le skyblock
+    aliases: [money, balance, bal]
+  payer:
+    description: Donner de l'argent a un joueur
+    usage: /payer <joueur> <montant>
+    aliases: [pay]
   parcelle:
     description: Ta parcelle en creatif
     usage: /parcelle creer|tp|invite|ban|vote|top|supprimer

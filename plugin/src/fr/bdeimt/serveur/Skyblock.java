@@ -85,6 +85,8 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    private final File file;
    private final Map<String, Skyblock.Island> islands = new ConcurrentHashMap<>();
    private final Map<UUID, Long> lastVote = new ConcurrentHashMap<>();
+   /** Ceux qui ont deja recu leurs pieces de depart : une seule fois par joueur. */
+   private final Set<UUID> startingGiven = ConcurrentHashMap.newKeySet();
    /** Invitations en attente : invite -> « case de l'ile|moment ». */
    private final Map<UUID, String> invites = new ConcurrentHashMap<>();
 
@@ -128,7 +130,20 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
 
    public Location home(Skyblock.Island island) {
       World w = this.pl.worlds().world(Zone.SKYBLOCK);
-      return w == null ? null : new Location(w, island.x * SPACING + 0.5, ISLAND_Y + 1.0, island.z * SPACING + 0.5, 0.0F, 0.0F);
+
+      if (w == null) {
+         return null;
+      }
+
+      this.model();
+      return new Location(
+         w,
+         island.x * SPACING + this.homeOffset[0] + 0.5,
+         bedrockY() + this.homeOffset[1],
+         island.z * SPACING + this.homeOffset[2] + 0.5,
+         0.0F,
+         0.0F
+      );
    }
 
    /** L'ile qui contient ce point, ou null si on est entre deux iles. */
@@ -213,6 +228,13 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
          }
       }
 
+      for (String uuid : yml.getStringList("pieces-de-depart")) {
+         try {
+            this.startingGiven.add(UUID.fromString(uuid));
+         } catch (IllegalArgumentException ex) {
+         }
+      }
+
       this.pl.getLogger().info(this.islands.size() + " ile(s) skyblock chargee(s).");
    }
 
@@ -237,6 +259,14 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       for (Map.Entry<UUID, Long> entry : this.lastVote.entrySet()) {
          yml.set("derniers-votes." + entry.getKey(), entry.getValue());
       }
+
+      List<String> given = new ArrayList<>();
+
+      for (UUID uuid : this.startingGiven) {
+         given.add(uuid.toString());
+      }
+
+      yml.set("pieces-de-depart", given);
 
       try {
          yml.save(this.file);
@@ -271,7 +301,51 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       return new int[]{0, 0};
    }
 
-   /** Pose l'ile de depart : une plateforme, un arbre et un coffre. */
+   /** Le modele de l'ile, lu une fois dans ile-classique.txt. */
+   private List<String> model;
+   /** Ou l'on arrive sur l'ile, par rapport a son bloc de bedrock. */
+   private int[] homeOffset = new int[]{0, 5, 2};
+
+   private List<String> model() {
+      if (this.model != null) {
+         return this.model;
+      }
+
+      List<String> lines = new ArrayList<>();
+
+      try (java.io.InputStream in = this.pl.getResource("ile-classique.txt")) {
+         if (in != null) {
+            for (String line : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).split("\n")) {
+               line = line.trim();
+
+               if (!line.isEmpty() && !line.startsWith("#")) {
+                  lines.add(line);
+
+                  if (line.startsWith("maison ")) {
+                     String[] p = line.split(" ");
+                     this.homeOffset = new int[]{Integer.parseInt(p[1]), Integer.parseInt(p[2]), Integer.parseInt(p[3])};
+                  }
+               }
+            }
+         }
+      } catch (Exception ex) {
+         this.pl.getLogger().warning("Modele de l'ile illisible : " + ex.getMessage());
+      }
+
+      this.model = lines;
+      return lines;
+   }
+
+   /** La hauteur du bloc de bedrock : l'herbe arrive ainsi a ISLAND_Y. */
+   private static int bedrockY() {
+      return ISLAND_Y - 4;
+   }
+
+   /**
+    * Pose l'ile de depart classique : herbe, terre, pierre et sable en
+    * dessous, bedrock au fond, un chene, une torche, le coffre du Skyblock
+    * originel et une vache.
+    */
    private void build(Skyblock.Island island) {
       World w = this.pl.worlds().world(Zone.SKYBLOCK);
       if (w == null) {
@@ -279,45 +353,68 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       }
 
       int cx = island.x * SPACING;
+      int cy = bedrockY();
       int cz = island.z * SPACING;
+      Block chest = null;
+      List<String[]> chestItems = new ArrayList<>();
+      List<String[]> entities = new ArrayList<>();
 
-      for (int dx = -4; dx <= 4; dx++) {
-         for (int dz = -4; dz <= 4; dz++) {
-            if (Math.abs(dx) + Math.abs(dz) > 6) {
-               continue;
+      for (String line : this.model()) {
+         String[] p = line.split(" ", 5);
+
+         try {
+            switch (p[0]) {
+               case "bloc" -> {
+                  Block block = w.getBlockAt(cx + Integer.parseInt(p[1]), cy + Integer.parseInt(p[2]), cz + Integer.parseInt(p[3]));
+                  block.setBlockData(Bukkit.createBlockData(p[4]), false);
+
+                  if (p[4].startsWith("minecraft:chest")) {
+                     chest = block;
+                  }
+               }
+               case "coffre" -> chestItems.add(p);
+               case "entite" -> entities.add(p);
+               default -> {
+               }
             }
-
-            w.getBlockAt(cx + dx, ISLAND_Y, cz + dz).setType(Material.GRASS_BLOCK, false);
-            w.getBlockAt(cx + dx, ISLAND_Y - 1, cz + dz).setType(Material.DIRT, false);
-            w.getBlockAt(cx + dx, ISLAND_Y - 2, cz + dz).setType(Material.DIRT, false);
+         } catch (Exception ex) {
+            this.pl.getLogger().warning("Ligne du modele ignoree : " + line + " (" + ex.getMessage() + ")");
          }
       }
 
-      w.getBlockAt(cx, ISLAND_Y - 3, cz).setType(Material.BEDROCK, false);
+      if (chest != null && chest.getState() instanceof Chest state) {
+         org.bukkit.inventory.Inventory inv = state.getBlockInventory();
 
-      try {
-         w.generateTree(new Location(w, cx + 3, ISLAND_Y + 1, cz + 3), new Random(), TreeType.TREE);
-      } catch (Throwable t) {
+         for (String[] p : chestItems) {
+            try {
+               int slot = Integer.parseInt(p[1]);
+               Material material = Material.valueOf(p[2]);
+               int amount = Integer.parseInt(p[3].split(" ")[0]);
+
+               if (slot >= 0 && slot < inv.getSize()) {
+                  inv.setItem(slot, new ItemStack(material, amount));
+               }
+            } catch (Exception ex) {
+               this.pl.getLogger().warning("Objet du coffre ignore : " + String.join(" ", p));
+            }
+         }
       }
 
-      Block chest = w.getBlockAt(cx - 2, ISLAND_Y + 1, cz - 2);
-      chest.setType(Material.CHEST, false);
+      for (String[] p : entities) {
+         try {
+            String[] rest = p[4].split(" ", 2);
+            Location at = new Location(w, cx + Integer.parseInt(p[1]) + 0.5, cy + Integer.parseInt(p[2]), cz + Integer.parseInt(p[3]) + 0.5);
+            org.bukkit.entity.Entity entity = w.spawnEntity(at, org.bukkit.entity.EntityType.valueOf(rest[0]));
 
-      if (chest.getState() instanceof Chest state) {
-         state.getBlockInventory()
-            .addItem(
-               new ItemStack(Material.LAVA_BUCKET),
-               new ItemStack(Material.ICE, 2),
-               new ItemStack(Material.BONE_MEAL, 8),
-               new ItemStack(Material.OAK_SAPLING, 2),
-               new ItemStack(Material.WHEAT_SEEDS, 4),
-               new ItemStack(Material.PUMPKIN_SEEDS, 2),
-               new ItemStack(Material.MELON_SEEDS, 2),
-               new ItemStack(Material.SUGAR_CANE, 2),
-               new ItemStack(Material.COBBLESTONE, 16),
-               new ItemStack(Material.BREAD, 8)
-            );
-         state.update();
+            if (rest.length > 1 && !rest[1].isBlank()) {
+               entity.customName(Msg.mm("<white>" + rest[1].trim() + "</white>"));
+               entity.setCustomNameVisible(true);
+            }
+
+            entity.setPersistent(true);
+         } catch (Exception ex) {
+            this.pl.getLogger().warning("Entite du modele ignoree : " + String.join(" ", p));
+         }
       }
    }
 
@@ -425,6 +522,12 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       island.created = System.currentTimeMillis();
       this.islands.put(island.key(), island);
       this.build(island);
+
+      if (this.startingGiven.add(p.getUniqueId())) {
+         this.pl.economy().give(p.getUniqueId(), Economy.STARTING_MONEY);
+         Msg.info(p, "Tu reçois <#FFD25E>" + Economy.format(Economy.STARTING_MONEY) + "</#FFD25E> pour démarrer. <gray>(/solde)</gray>");
+      }
+
       this.save();
 
       if (this.pl.worlds().zoneOf(p) != Zone.SKYBLOCK) {

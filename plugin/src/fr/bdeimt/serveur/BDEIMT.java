@@ -52,6 +52,9 @@ public final class BDEIMT extends JavaPlugin {
    private Skyblock skyblock;
    private Skins skins;
    private Sounds sounds;
+   private Economy economy;
+   private Shops shops;
+   private Market market;
    /** Les autres jars BDEIMT trouves dans plugins/, s'il y en a. */
    private final java.util.List<String> doubles = new java.util.ArrayList<>();
    private SkyHub skyhub;
@@ -164,6 +167,18 @@ public final class BDEIMT extends JavaPlugin {
       return this.sounds;
    }
 
+   public Economy economy() {
+      return this.economy;
+   }
+
+   public Shops shops() {
+      return this.shops;
+   }
+
+   public Market market() {
+      return this.market;
+   }
+
    /** Le nom du fichier .jar reellement charge par le serveur. */
    public String getFileName() {
       try {
@@ -223,6 +238,11 @@ public final class BDEIMT extends JavaPlugin {
       this.npcs = new Npcs(this);
       this.skins = new Skins(this);
       this.sounds = new Sounds(this);
+      this.economy = new Economy(this);
+      this.shops = new Shops(this);
+      this.shops.load();
+      this.market = new Market(this);
+      this.market.load();
       this.parkour = new Parkour(this);
       this.parkour.load();
       this.plots = new Plots(this);
@@ -262,7 +282,8 @@ public final class BDEIMT extends JavaPlugin {
       this.parkour.refreshHologram();
       this.plots.init();
       this.skyblock.init();
-      this.skyhub.init();
+      this.skyhub.decorate();
+      this.shops.spawnAll();
 
       for (Listener var5 : new Listener[]{
          this.auth,
@@ -288,7 +309,7 @@ public final class BDEIMT extends JavaPlugin {
          this.parkour,
          this.plots,
          this.skyblock,
-         this.skyhub,
+         this.shops,
          new FunItems(),
          new Menu.Listen()
       }) {
@@ -319,7 +340,9 @@ public final class BDEIMT extends JavaPlugin {
       this.cmd("parkour", this.parkour, this.parkour);
       this.cmd("parcelle", this.plots, this.plots);
       this.cmd("ile", this.skyblock, this.skyblock);
-      this.cmd("marche", this.skyhub, null);
+      this.cmd("marche", this.market, null);
+      this.cmd("solde", this.economy, this.economy);
+      this.cmd("payer", this.economy, this.economy);
 
       for (String var26 : new String[]{"tpa", "tpahere", "tpaccept", "tpdeny", "tpcancel", "tpatoggle", "sethome", "home", "delhome", "homes", "spawn"}) {
          this.cmd(var26, this.teleports, this.teleports);
@@ -346,6 +369,7 @@ public final class BDEIMT extends JavaPlugin {
          this.graves.tick();
          this.tab.tick();
          this.hub.musicTick();
+         this.skyhub.tick();
          this.parkour.tick();
          this.plots.tick();
       }, 20L, 20L);
@@ -359,9 +383,9 @@ public final class BDEIMT extends JavaPlugin {
       Bukkit.getScheduler().runTaskTimer(this, this.npcs::watch, 200L, 200L);
       Bukkit.getScheduler().runTaskTimer(this, this.hub::particles, 40L, 3L);
       Bukkit.getScheduler().runTaskTimer(this, this.hub::refreshTitles, 100L, 100L);
-      Bukkit.getScheduler().runTaskTimer(this, this.skyhub::regrowFarm, 24000L, 24000L);
-      Bukkit.getScheduler().runTaskTimer(this, this.skyhub::restock, 36000L, 36000L);
-      Bukkit.getScheduler().runTaskTimer(this, this.skyhub::regrowVeins, 72000L, 72000L);
+      Bukkit.getScheduler().runTaskTimer(this, this.shops::watch, 220L, 200L);
+      // Le rappel du marche, toutes les quinze minutes, dans le chat du skyblock.
+      Bukkit.getScheduler().runTaskTimer(this, this.market::remind, 18000L, 18000L);
       long var24 = Math.max(1L, this.getConfig().getLong("astuces-toutes-les-minutes", 20L)) * 1200L;
       long var6 = Math.max(1L, this.getConfig().getLong("rappel-guide-toutes-les-minutes", 120L)) * 1200L;
       Bukkit.getScheduler().runTaskTimer(this, this.announcer::tip, var24, var24);
@@ -440,8 +464,15 @@ public final class BDEIMT extends JavaPlugin {
       }
 
       try {
-         if (this.skyhub != null) {
-            this.skyhub.clearAll();
+         if (this.shops != null) {
+            this.shops.clearAll();
+         }
+      } catch (Throwable t) {
+      }
+
+      try {
+         if (this.market != null) {
+            this.market.save();
          }
       } catch (Throwable t) {
       }
@@ -574,6 +605,12 @@ public final class BDEIMT extends JavaPlugin {
          {"mineskin-cle", ""}
       };
       boolean var2 = false;
+      String var7 = this.getConfig().getString("mondes.skyhub.spawn", "");
+
+      if (var7 != null && var7.startsWith("bdeimt_skyhub;")) {
+         this.getConfig().set("mondes.skyhub.spawn", "bdeimt_skyspawn;44.5;86.0;32.5;0.0;0.0");
+         var2 = true;
+      }
 
       for (Object[] var6 : var1) {
          if (!this.getConfig().contains((String)var6[0])) {

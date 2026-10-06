@@ -47,7 +47,8 @@ public final class Worlds implements Listener {
    /** Points d'arrivee releves dans les cartes fournies, faute de reglage. */
    private static final Map<Zone, String> DEFAULT_SPAWNS = Map.of(
       Zone.HUB, "bdeimt_hub;191.5;-44.0;142.5;0.0;0.0",
-      Zone.PARKOUR, "bdeimt_parkour;0.5;43.0;-0.5;1.5;0.3"
+      Zone.PARKOUR, "bdeimt_parkour;0.5;43.0;-0.5;1.5;0.3",
+      Zone.SKYHUB, "bdeimt_skyspawn;44.5;86.0;32.5;0.0;0.0"
    );
    private final BDEIMT pl;
    private final Map<Zone, BuildRule> buildRules = new EnumMap<>(Zone.class);
@@ -84,6 +85,7 @@ public final class Worlds implements Listener {
    public void init() {
       this.load(Zone.HUB);
       this.load(Zone.PARKOUR);
+      this.load(Zone.SKYHUB);
    }
 
    /** Le dossier ou Paper range la dimension d'un monde : world/dimensions/minecraft/‹nom›. */
@@ -778,7 +780,8 @@ public final class Worlds implements Listener {
    );
    /** Ce que le skyblock reprend de la survie : les votes, les kits, le marche. */
    private static final java.util.Set<String> SKYBLOCK_AUSSI = java.util.Set.of(
-      "vote", "probavote", "probavotes", "kit", "kits", "marche", "marché", "ile", "île", "is", "island", "skyblock"
+      "vote", "probavote", "probavotes", "kit", "kits", "marche", "marché", "marchand", "ile", "île", "is", "island", "skyblock",
+      "solde", "money", "balance", "bal", "payer", "pay"
    );
    /** Les teleportations et l'echange, autorises aussi dans le skyblock. */
    private static final java.util.Set<String> ENTRE_JOUEURS = java.util.Set.of(
