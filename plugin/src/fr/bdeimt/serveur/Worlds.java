@@ -335,7 +335,9 @@ public final class Worlds implements Listener {
 
       if (zone == Zone.PARKOUR) {
          this.pl.parkour().start(p);
-      } else {
+      } else if (zone != Zone.PARCELLES) {
+         // Le parkour et les parcelles ont chacun leur panneau lateral ; partout
+         // ailleurs on rend au joueur le tableau commun, celui des votes.
          try {
             p.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
          } catch (Throwable t) {

@@ -3,7 +3,7 @@
 Ce document sert de point d'entrée à Claude Code (ou à n'importe quel développeur)
 pour reprendre le projet sans avoir l'historique de la conversation.
 
-Dernière mise à jour : 6 octobre 2026 — plugin BDEIMT **v1.7**.
+Dernière mise à jour : 6 octobre 2026 — plugin BDEIMT **v2.0**.
 
 ---
 
@@ -57,80 +57,73 @@ Dernière mise à jour : 6 octobre 2026 — plugin BDEIMT **v1.7**.
 
 ## 3. Chaîne de compilation
 
-Il n'y a **ni Maven ni Gradle** : le plugin est compilé à la main avec `javac`,
-contre les sources de l'API Paper. Tout est dans `/home/claude/build`.
+> **Important** : les sources du plugin avaient été perdues avec l'ancien
+> environnement de travail (il ne restait que le `.jar`). Elles ont été
+> reconstituées par décompilation, corrigées, et **versionnées dans ce dépôt
+> git**. Ne plus jamais travailler en dehors du dépôt.
+
+Toujours ni Maven ni Gradle pour le plugin lui-même : on compile à la main avec
+`javac`, contre les **sources de l'API Paper 26.2** — la version qui tourne
+réellement sur le serveur, et non plus 1.21.4 comme avant. Compiler contre la
+version exacte du serveur supprime le besoin de l'ancien outil `BinCheck` : la
+compatibilité binaire est acquise par construction.
 
 ```
-/home/claude/build/
+serveurimtmortel/
 ├── plugin/
-│   ├── src/fr/bdeimt/serveur/*.java    ← le code (30 fichiers, ~7 200 lignes)
-│   ├── resources/                       ← plugin.yml, config.yml, histoires.yml
-│   ├── out/                             ← classes compilées (jetable)
-│   └── BDEIMT.jar                       ← le jar produit
-├── paper/            ← sources paper-api 1.21.4 (cible de compilation)
-├── paper-1.21.11/    ← sources paper-api 1.21.11 (vérification)
-├── paper-26.2/       ← sources paper-api 26.2  (vérification)
-├── adventure/, adventure-5.2.0/, gson/, guava/, slf4j/, joml/, stubs/ …
-├── sourcepath.txt    ← sourcepath de compilation (API 1.21.4)
-├── sp-1.21.11.txt    ← sourcepath de vérification 1.21.11
-├── sp-26.2.txt       ← sourcepath de vérification 26.2
-├── bincheck/         ← BinCheck.java + classes compilées
-└── hors-build/       ← code écrit mais volontairement exclu du jar
+│   ├── src/fr/bdeimt/serveur/*.java    ← le code (41 fichiers, ~16 200 lignes)
+│   └── resources/                       ← plugin.yml, config.yml, histoires.yml
+├── build/
+│   ├── compile.sh       ← compile dans build/out
+│   ├── jar.sh           ← compile puis fabrique livraison/BDEIMT.jar
+│   ├── sourcepath.txt   ← chemins des sources de l'API Paper + des stubs
+│   ├── deps/pom.xml     ← les dépendances de l'API, tirées de Maven Central
+│   └── stubs/           ← Brigadier, introuvable sur Maven Central
+└── livraison/BDEIMT.jar
 ```
 
-### Compiler
+### Préparer l'environnement sur une machine neuve
 
 ```bash
-cd /home/claude/build
-rm -rf plugin/out && mkdir plugin/out
-javac --release 21 -nowarn -proc:none -implicit:none -encoding UTF-8 \
-  -sourcepath "$(cat sourcepath.txt)" \
-  -d plugin/out plugin/src/fr/bdeimt/serveur/*.java
+# 1. les sources de l'API Paper, à la version du serveur
+git clone --depth 1 https://github.com/PaperMC/paper /home/user/papermc/paper
+git -C /home/user/papermc/paper fetch --depth 1 origin tag 26.2
+git -C /home/user/papermc/paper checkout 26.2
+
+# 2. les dépendances de l'API (Maven Central)
+cd build/deps && mvn -q -B dependency:copy-dependencies -DoutputDirectory=jars
 ```
 
-### Vérifier la compatibilité binaire
+`build/sourcepath.txt` pointe vers `paper-api/src/main/java`,
+`paper-api/src/generated/java` et `build/stubs`.
 
-Le plugin est compilé contre l'API **1.21.4** mais tourne sur **26.2**.
-`BinCheck` relève toutes les méthodes et tous les champs d'API utilisés par le
-plugin, puis vérifie qu'ils existent avec la même signature effacée dans les
-autres versions. Il faut **0 problème** avant toute livraison.
+**Attention au réseau** : depuis l'environnement de travail en nuage, seul
+`repo1.maven.org` est joignable. `repo.papermc.io`, `hub.spigotmc.org`,
+`jitpack.io` et `api.papermc.io` sont bloqués. GitHub n'est accessible qu'en
+clonage via le proxy git de la session. C'est pour cette raison que l'API Paper
+est prise sous forme de **sources clonées**, et que **Brigadier** — absent de
+Maven Central — est remplacé par des stubs d'API dans `build/stubs`, suffisants
+pour que le typage passe (le plugin n'utilise pas Brigadier lui-même).
+
+### Compiler et livrer
 
 ```bash
-cd /home/claude/build
-for v in 1.21.11 26.2; do
-  java -cp bincheck BinCheck "$(cat sourcepath.txt)" "$(cat sp-$v.txt)" \
-       plugin/src/fr/bdeimt/serveur/*.java
-done
-# attendu : "references externes verifiees : 865 ; problemes : 0"
+./build/compile.sh     # doit afficher zéro erreur
+./build/jar.sh         # produit livraison/BDEIMT.jar
 ```
 
-### Construire le jar et livrer
-
-```bash
-cd /home/claude/build
-cp plugin/resources/*.yml plugin/out/
-rm -f plugin/BDEIMT.jar
-(cd plugin/out && jar cf ../BDEIMT.jar .)
-cp plugin/BDEIMT.jar /home/claude/livraison/
-(cd plugin/src && zip -qr /home/claude/livraison/BDEIMT-sources.zip . ../resources)
-```
-
-Les fichiers `.yml` **doivent** être copiés dans `out/` avant le `jar cf`, sinon
-`plugin.yml` manque et le plugin ne se charge pas. `histoires.yml` doit aussi
-être dans le jar : il est extrait par `saveResource` au premier démarrage.
+`jar.sh` recopie les `.yml` de `plugin/resources` dans `build/out` avant de
+fabriquer l'archive : sans ça, `plugin.yml` manque et le plugin ne se charge
+pas.
 
 ### Avant chaque livraison
 
-1. `javac` sans erreur.
-2. `BinCheck` à 0 problème sur 1.21.11 **et** 26.2.
-3. Numéro de version incrémenté dans `resources/plugin.yml`.
-4. Toute nouvelle commande déclarée dans `plugin.yml` **et** enregistrée dans
-   `BDEIMT.onEnable()` via `cmd(...)` — sinon le serveur log
-   « Commande absente de plugin.yml ».
-5. Tout nouveau `Listener` ajouté au tableau de `registerEvents` dans
-   `BDEIMT.onEnable()`.
-
----
+1. `./build/compile.sh` sans erreur.
+2. Numéro de version incrémenté dans `plugin/resources/plugin.yml`.
+3. Toute nouvelle commande déclarée dans `plugin.yml` **et** enregistrée dans
+   `BDEIMT.onEnable()` via `cmd(...)`.
+4. Tout nouveau `Listener` ajouté au tableau de `registerEvents`.
+5. Commit dans ce dépôt.
 
 ## 4. Architecture du plugin
 
@@ -172,6 +165,18 @@ une par minute (dragon, sauvegarde, classement), et les annonces de Poulpy.
 | `AdminCommand.java` | `/imt` : outils du Mobutu |
 | `Menu.java` | Base des interfaces en coffre, en lecture seule |
 | `Util.java` | Objets, durées, positions, sons |
+| `Zone.java` | **La table des univers** : monde, groupe d'inventaire et de chat, couleur, mode de jeu, PvP, construction, dégâts |
+| `Worlds.java` | Chargement des mondes, protections communes, filtrage des commandes selon le monde, voyage d'un univers à l'autre |
+| `Inventories.java` | Un inventaire, une expérience et une vie **par groupe de mondes** |
+| `Hub.java` | La boussole, son menu des modes de jeu, les portails physiques |
+| `Tab.java` | La liste des joueurs : connectés par monde, rang et rôle de liste |
+| `Lists.java` | Les listes de la survie (20 joueurs, pas de coups entre membres) |
+| `Npcs.java` | Zaza et le Mobutu, deux mannequins au vrai modèle de joueur |
+| `Parkour.java` | Le parkour du mois, ses points de contrôle et son classement |
+| `Plots.java` | Les parcelles en créatif, leur générateur de monde et les votes |
+| `Skyblock.java` | Les îles, toutes dans un seul monde, sur une grille de 256 blocs |
+| `SkyHub.java` | La place centrale du skyblock : champ, enclos, mine, marchands |
+| `ThirdParty.java` | Retouches sur les autres plugins (message de SkinsRestorer) |
 
 ### Fichiers créés sur le serveur
 
@@ -186,6 +191,11 @@ histoires.yml       les 13 histoires du /tunnel — ÉDITABLE, puis /imt reload
 CODE-ADMIN.txt      code secret du compte admin (effacé une fois utilisé)
 images/             BDEIMT.png et serveur.png à déposer soi-même
 joueurs/<uuid>.yml  une fiche par joueur
+inventaires/<uuid>.yml  un inventaire par groupe de mondes
+listes.yml          les listes de la survie
+parkour.yml         points de contrôle et classement du parkour
+parcelles.yml       les parcelles, leurs invités et leurs voix
+skyblock.yml        les îles et leurs invités
 ```
 
 ---
@@ -231,6 +241,31 @@ les reproduire.
   `GameRule.values()` et on compare les noms plutôt que d'utiliser les constantes.
 - **D'où `BinCheck`** : aucune livraison sans 0 problème sur les deux versions.
 
+### Les univers séparés
+
+- **L'inventaire à la reconnexion.** Minecraft rend au joueur l'inventaire du
+  monde où il s'est déconnecté. Il faut donc relever son groupe **à la
+  connexion** (`Auth.onJoin`) avant de le faire passer dans le hub, sinon on
+  range l'inventaire du hub dans le groupe « survie » et on écrase le stuff.
+- **Les panneaux latéraux.** Le classement des votes vit sur le tableau
+  *principal*, partagé par tout le monde. Le parkour et les parcelles ont
+  besoin d'un panneau différent par joueur : ils reçoivent donc un tableau
+  neuf. `Worlds.arrive` rend le tableau principal partout ailleurs — ne pas
+  oublier d'exclure une zone qui aurait son propre panneau.
+- **Les points de réapparition des cartes téléchargées sont faux.** Celui de la
+  carte du hub pointe sous la carte. Les coordonnées relevées dans les cartes
+  livrées servent de valeur par défaut dans `Worlds.DEFAULT_SPAWNS`, et
+  `/imt monde spawn ‹zone›` permet de corriger en jeu.
+- **Générer un monde bloc par bloc coûte cher.** Le monde des parcelles a 127
+  couches de terre : `ChunkData.setRegion` remplit le volume d'un coup, là où
+  `setBlock` ferait trente-deux mille appels par chunk.
+- **Effacer une île rendue** touche plus de quatre millions de blocs. Le travail
+  est étalé sur plusieurs ticks et saute les colonnes vides (le monde est vide
+  par défaut), sinon le serveur se fige plusieurs secondes.
+- **Aucun plugin ne peut intercepter un message envoyé par un autre plugin.**
+  Pour faire taire SkinsRestorer, on va vider la ligne dans ses propres
+  fichiers de traduction au démarrage (`ThirdParty`).
+
 ### Système
 
 - **SELinux** (Oracle Linux) empêche systemd de lancer un script du dossier
@@ -242,7 +277,44 @@ les reproduire.
 
 ---
 
-## 6. Ce qui existe aujourd'hui (v1.7)
+## 6. Les univers (v2.0)
+
+Le serveur n'est plus une seule survie : c'est un ensemble de mondes étanches,
+reliés par un hub. Deux mondes du même **groupe** partagent l'inventaire et le
+chat ; deux groupes différents ne partagent rien.
+
+| Zone | Monde | Groupe | Mode | PvP | Casser | Dégâts |
+|---|---|---|---|---|---|---|
+| `LOGIN` | `bdeimt_lobby` | lobby | aventure | non | non | non |
+| `HUB` | `bdeimt_hub` | lobby | aventure | non | non | non |
+| `SURVIE` | `world` (+ nether, end) | survie | survie | oui | oui | oui |
+| `PARKOUR` | `bdeimt_parkour` | parkour | aventure | non | non | non |
+| `SKYHUB` | `bdeimt_skyhub` | skyblock | survie | non | blé et minerai | oui |
+| `SKYBLOCK` | `bdeimt_skyblock` | skyblock | survie | non | sur son île | oui |
+| `PARCELLES` | `bdeimt_parcelles` | parcelles | créatif | non | sur sa parcelle | non |
+
+`bdeimt_hub` et `bdeimt_parkour` sont des cartes **déposées à la main** dans le
+dossier du serveur. Si le dossier manque, le mode apparaît « bientôt
+disponible » dans la boussole et le reste continue de tourner. Les trois autres
+mondes sont créés par le plugin au premier démarrage.
+
+Le parcours d'un joueur : il arrive dans `bdeimt_lobby`, figé, le temps de
+`/register` ou `/login` ; une fois identifié il est posé dans `bdeimt_hub`, où
+il se déplace librement, l'inventaire vide sauf une boussole au milieu de la
+barre d'objets. La boussole ouvre le menu des modes de jeu. Des portails
+physiques peuvent faire la même chose (`/imt portail ‹zone›`).
+
+### Règles communes
+
+- Le chat est séparé par groupe. Seule la mort du Mobutu traverse tous les
+  mondes.
+- Les commandes sont filtrées par monde (`Worlds.allowed`) : les délires, les
+  votes, les tombes, les homes et l'aura restent en survie ; le skyblock
+  récupère les votes, les kits, le marché et les téléportations ; les parcelles
+  gardent les téléportations mais pas l'échange.
+- `/spawn` ramène au départ du monde où l'on est. `/hub` ramène au hub.
+
+## 7. Ce qui existe aujourd'hui
 
 ### Commandes joueur
 
@@ -263,6 +335,12 @@ les reproduire.
 | `/aura` | Son aura et le classement |
 | `/guide` | Le guide de Poulpy |
 | `/fly` | Le fly gagné au vote |
+| `/hub` | Revenir au hub choisir un monde |
+| `/liste …` | Sa bande en survie : `create`, `invite`, `accept`, `role`, `kick`, `quitter`, `supprimer` |
+| `/parkour` | Le classement du parkour du mois ; `/parkour recommencer` |
+| `/parcelle …` | `creer`, `tp`, `invite`, `retirer`, `ban`, `unban`, `vote`, `top`, `supprimer` |
+| `/ile …` | Skyblock : `creer`, `tp`, `invite`, `retirer`, `hub`, `supprimer confirmer` |
+| `/marche` | Les trois marchands du hub skyblock |
 
 ### Commandes de délire
 
@@ -292,6 +370,10 @@ et `/traq` lui répond même quand le Traq est fermé. Les kits vote gardent leu
 | `/maintenance annuler` / `activer` / `fin` / `etat` | OP | Gestion du mode maintenance |
 | `/maudire <joueur>` | Mobutu | Le châtiment |
 | `/imt …` | Mobutu | `modo`, `resetmdp`, `info`, `votes`, `lot`, `traq ouvrir\|fermer`, `listes reset`, `dragon`, `lobby`, `reload` |
+| `/imt monde` | Mobutu | La liste des univers ; `/imt monde spawn ‹zone›` fixe le point d'arrivée |
+| `/imt portail ‹zone› [rayon]` | Mobutu | Pose un portail physique ; `/imt portail effacer` nettoie le monde |
+| `/imt pnj ‹zaza\|mobutu›` | Mobutu | Pose le PNJ ici ; `/imt pnj skin ‹id› ‹pseudo›` lui donne un skin |
+| `/parkour point ‹nom›` | Mobutu | Pose un point de contrôle ; `annuler`, `nom`, `plancher`, `reset` |
 
 ### Autres mécaniques
 
@@ -306,7 +388,7 @@ et `/traq` lui répond même quand le Traq est fermé. Les kits vote gardent leu
 
 ---
 
-## 7. Travaux en attente
+## 8. Travaux en attente
 
 ### Console web du staff — écrite mais **exclue du jar**
 
@@ -325,19 +407,39 @@ Si Elias redemande une console externe, lui proposer d'abord **Crafty Controller
 ou **MCSManager**, qui sont faits pour ça, plutôt que de rouvrir un port depuis le
 plugin.
 
+### Rien n'a été testé en jeu
+
+Le plugin compile contre l'API exacte du serveur, mais **aucune de ces
+fonctionnalités n'a été essayée sur un vrai serveur** : pas de Minecraft dans
+l'environnement de travail. Les points les plus à surveiller au premier
+démarrage :
+
+- les deux cartes déposées (`bdeimt_hub`, `bdeimt_parkour`) sont en 1.21.5 et
+  1.21.11 : Paper 26.2 va les convertir au chargement, ce qui peut prendre un
+  moment la première fois ;
+- les mannequins (Zaza, le Mobutu) sont une entité récente ; si le serveur
+  refuse de les poser, le plugin l'écrit dans la console et le reste tourne ;
+- la construction du hub skyblock pose une vingtaine de milliers de blocs au
+  tout premier démarrage.
+
 ### Autres pistes évoquées
 
 - Les kits vote n'ont pas de délai séparé par liste : prendre `passion` bloque
   aussi `imtmortel` pendant 2 h. C'est voulu, mais à revoir si le vote des listes
   devient l'enjeu principal.
-- La lenteur à la connexion n'a pas été diagnostiquée. Piste la plus probable :
-  **SkinsRestorer**, qui interroge Mojang à chaque arrivée en mode cracké et que
-  les adresses Oracle font patienter. À confirmer avec Elias (à quel écran ça
-  bloque, et combien de temps) avant de toucher à quoi que ce soit.
+- La lenteur à la connexion n'est toujours pas diagnostiquée. La piste
+  SkinsRestorer reste la plus probable (il interroge Mojang à chaque arrivée en
+  mode cracké). Le message publicitaire est maintenant supprimé, mais pas la
+  requête réseau elle-même.
+- `Msg.broadcast` reste global : les arrivées, les départs et les astuces de
+  Poulpy traversent encore tous les mondes. Seul le chat des joueurs est
+  cloisonné. À revoir si ça gêne.
+- Les parcelles sont attribuées en spirale depuis l'origine, sans limite de
+  monde. Si le quartier devient immense, poser une bordure de monde.
 
 ---
 
-## 8. Procédure de livraison à Elias
+## 9. Procédure de livraison à Elias
 
 1. Compiler, vérifier avec BinCheck, construire le jar.
 2. Envoyer `BDEIMT.jar` (et les sources si utile).

@@ -26,7 +26,6 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.ChunkGenerator;
@@ -664,10 +663,6 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
       }
    }
 
-   @EventHandler
-   public void onQuit(org.bukkit.event.player.PlayerQuitEvent e) {
-   }
-
    @Override
    public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
       List<String> out = new ArrayList<>();
@@ -749,17 +744,16 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
       @Override
       public void generateSurface(WorldInfo info, Random random, int chunkX, int chunkZ, ChunkGenerator.ChunkData data) {
          int bottom = data.getMinHeight();
+         // En un seul appel plutot qu'en cent vingt-sept mille : le remplissage
+         // par region est beaucoup plus rapide que bloc par bloc, et c'est ce
+         // qui rend la generation du monde supportable quand on l'explore.
+         data.setRegion(0, bottom, 0, 16, bottom + 1, 16, Material.BEDROCK);
+         data.setRegion(0, bottom + 1, 0, 16, GROUND, 16, Material.DIRT);
 
          for (int lx = 0; lx < 16; lx++) {
             for (int lz = 0; lz < 16; lz++) {
                int worldX = chunkX * 16 + lx;
                int worldZ = chunkZ * 16 + lz;
-               data.setBlock(lx, bottom, lz, Material.BEDROCK);
-
-               for (int y = bottom + 1; y < GROUND; y++) {
-                  data.setBlock(lx, y, lz, Material.DIRT);
-               }
-
                int inX = Math.floorMod(worldX, PERIOD);
                int inZ = Math.floorMod(worldZ, PERIOD);
                boolean roadX = inX >= SIZE;
