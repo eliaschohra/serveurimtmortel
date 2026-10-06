@@ -618,11 +618,44 @@ public final class BDEIMT extends JavaPlugin {
          var2 = true;
       }
 
+      // L'ancien point d'arrivee du lobby skyblock regardait droit dans le gros
+      // champignon : on le tourne vers le panneau des regles.
+      if ("bdeimt_skyspawn;44.5;86.0;32.5;0.0;0.0".equals(this.getConfig().getString("mondes.skyhub.spawn", ""))) {
+         this.getConfig().set("mondes.skyhub.spawn", "bdeimt_skyspawn;44.5;86.0;32.5;130.0;-20.0");
+         var2 = true;
+      }
+
+      if (this.getConfig().contains("mondes.skyhub.version", true)) {
+         this.getConfig().set("mondes.skyhub.version", null);
+         var2 = true;
+      }
+
+      // contains(..., true) : on regarde le fichier lui-meme. Sans ce « true »,
+      // les valeurs par defaut du plugin comptaient comme presentes, et les
+      // nouveaux reglages n'etaient jamais ecrits dans config.yml.
       for (Object[] var6 : var1) {
-         if (!this.getConfig().contains((String)var6[0])) {
-            this.getConfig().set((String)var6[0], var6[1]);
+         if (!this.getConfig().contains((String)var6[0], true)) {
+            // La valeur en vigueur jusqu'ici (celle du plugin si le fichier
+            // n'en disait rien), pour ne rien changer au comportement.
+            this.getConfig().set((String)var6[0], this.getConfig().get((String)var6[0], var6[1]));
             var2 = true;
          }
+      }
+
+      if (!this.getConfig().contains("astuces-par-mode-toutes-les-minutes", true)) {
+         this.getConfig().set("astuces-par-mode-toutes-les-minutes", 5);
+         var2 = true;
+      }
+
+      try {
+         this.getConfig().setComments("sons", java.util.List.of(
+            "Le pack de sons du BDE (extraits joues sur /vote ‹liste› en survie).",
+            "Le plus simple : en jeu, /imt sons ‹lien de mc-packs.net› remplit tout seul ces deux lignes."
+         ));
+         this.getConfig().setComments("astuces-par-mode-toutes-les-minutes", java.util.List.of(
+            "Astuces propres a chaque mode (skyblock, parcelles, parkour, lobby), dans le chat de ce mode."
+         ));
+      } catch (Throwable t) {
       }
 
       if (var2) {

@@ -107,8 +107,10 @@ mineskin-cle: ""
 # Un extrait joue quand on prend le kit d'une liste (/vote <liste>),
 # en survie seulement. Les sons voyagent dans un « pack de ressources »
 # que le jeu de chaque joueur telecharge une fois.
+# Le plus simple : en jeu, tape  /imt sons <lien donne par mc-packs.net>
+# Le plugin verifie le pack et remplit tout seul les deux lignes ci-dessous.
 #  pack-url  : l'adresse ou le pack .zip est depose (mc-packs.net par ex.)
-#  pack-sha1 : son empreinte, donnee en meme temps que le pack
+#  pack-sha1 : son empreinte (calculee par /imt sons)
 # Vide = pas de pack, pas de son.
 sons:
   pack-url: ""

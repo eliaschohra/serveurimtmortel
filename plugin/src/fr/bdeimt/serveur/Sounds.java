@@ -59,6 +59,93 @@ public final class Sounds {
       }
    }
 
+   /**
+    * {@code /imt sons ‹lien›} : enregistre le pack sans toucher a config.yml.
+    *
+    * <p>Le serveur telecharge lui-meme le pack pour en calculer l'empreinte
+    * SHA-1 (sans elle, les joueurs retelechargeraient le pack a chaque
+    * connexion), l'enregistre, puis le propose a tous ceux qui sont en ligne.
+    * {@code /imt sons retirer} enleve le pack.
+    */
+   public void configure(org.bukkit.command.CommandSender sender, String[] args) {
+      if (args.length < 2) {
+         String url = this.url();
+         Msg.raw(sender, "<#FF9AC8><bold>Pack de sons</bold></#FF9AC8> <gray>— " + (url.isEmpty() ? "<#FF5555>aucun</#FF5555>" : "<white>" + url + "</white>") + "</gray>");
+         Msg.raw(sender, " <white>/imt sons ‹lien›</white> <gray>— colle le lien donné par mc-packs.net</gray>");
+         Msg.raw(sender, " <white>/imt sons retirer</white> <gray>— ne plus envoyer de pack</gray>");
+         return;
+      }
+
+      if (args[1].equalsIgnoreCase("retirer") || args[1].equalsIgnoreCase("aucun")) {
+         this.pl.getConfig().set("sons.pack-url", "");
+         this.pl.getConfig().set("sons.pack-sha1", "");
+         this.pl.saveConfig();
+         Msg.ok(sender, "Pack de sons retiré.");
+         return;
+      }
+
+      String url = args[1].trim();
+
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+         Msg.err(sender, "Ce n'est pas un lien. Exemple : <white>/imt sons https://download.mc-packs.net/pack/....zip</white>");
+         return;
+      }
+
+      Msg.info(sender, "Téléchargement du pack pour vérification...");
+      org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(this.pl, () -> {
+         String sha1;
+         long size;
+
+         try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+               .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+               .connectTimeout(java.time.Duration.ofSeconds(15))
+               .build();
+            java.net.http.HttpResponse<byte[]> response = client.send(
+               java.net.http.HttpRequest.newBuilder(URI.create(url)).timeout(java.time.Duration.ofSeconds(60)).GET().build(),
+               java.net.http.HttpResponse.BodyHandlers.ofByteArray()
+            );
+
+            if (response.statusCode() != 200) {
+               throw new IllegalStateException("le site répond " + response.statusCode());
+            }
+
+            byte[] body = response.body();
+
+            if (body.length < 4 || body[0] != 'P' || body[1] != 'K') {
+               throw new IllegalStateException("ce lien ne donne pas un fichier .zip (c'est sans doute la page du site, pas le lien de téléchargement)");
+            }
+
+            size = body.length;
+            StringBuilder hex = new StringBuilder();
+
+            for (byte b : java.security.MessageDigest.getInstance("SHA-1").digest(body)) {
+               hex.append(String.format("%02x", b));
+            }
+
+            sha1 = hex.toString();
+         } catch (Exception ex) {
+            String why = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+            org.bukkit.Bukkit.getScheduler().runTask(this.pl, () -> Msg.err(sender, "Pack refusé : " + why.replace("<", "")));
+            return;
+         }
+
+         org.bukkit.Bukkit.getScheduler().runTask(this.pl, () -> {
+            this.pl.getConfig().set("sons.pack-url", url);
+            this.pl.getConfig().set("sons.pack-sha1", sha1);
+            this.pl.saveConfig();
+            Msg.ok(sender, "Pack de sons enregistré <gray>(" + (size / 1024) + " ko, SHA-1 " + sha1 + ")</gray>.");
+            Msg.info(sender, "Il est proposé dès maintenant aux joueurs connectés, et à chaque connexion.");
+
+            for (Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
+               if (this.pl.auth().isLogged(p)) {
+                  this.offer(p);
+               }
+            }
+         });
+      });
+   }
+
    /** L'extrait d'une liste, quand on prend son kit. En survie seulement. */
    public void playList(Player p, String list) {
       if (this.url().isEmpty() || this.pl.worlds().zoneOf(p) != Zone.SURVIE) {

@@ -1,3 +1,12 @@
+# BDEIMT v3.4 — mise à jour
+
+1. Remplace `plugins/BDEIMT.jar`, puis `/stop`.
+2. En jeu : `/imt sons <lien de mc-packs.net>`. Le plugin vérifie le pack, calcule son SHA-1 et l'enregistre tout seul.
+
+Les réglages manquants (sons, astuces par mode...) sont maintenant écrits dans `config.yml` au démarrage.
+
+---
+
 # BDEIMT v3.3 — mise à jour
 
 1. Dans `plugins/`, remplace `BDEIMT.jar`, puis `/stop`.

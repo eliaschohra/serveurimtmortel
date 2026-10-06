@@ -71,6 +71,9 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "solde":
                this.money(var1, var4);
                break;
+            case "sons":
+               this.pl.sounds().configure(var1, var4);
+               break;
             case "hologramme":
                if (Msg.noConsole(var1)) {
                   return true;
@@ -169,6 +172,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       Msg.raw(var1, " <white>/imt lot ‹id› [pseudo]</white> <gray>— donner un lot du /vote (test)");
       Msg.raw(var1, " <white>/imt traq ouvrir|fermer</white> <gray>— ouvrir/fermer le Traq · <white>/imt listes reset</white>");
       Msg.raw(var1, " <white>/imt dragon</white> <gray>— faire renaître le dragon maintenant");
+      Msg.raw(var1, " <white>/imt sons ‹lien›</white> <gray>— le pack de sons (lien mc-packs.net)");
       Msg.raw(var1, " <white>/imt lobby</white> <gray>— aller voir le lobby · <white>/imt reload</white> <gray>— recharger images et config");
       Msg.raw(
          var1,
@@ -716,7 +720,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
          return var5;
       } else {
          if (var4.length == 1) {
-            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo", "aura", "marchand", "solde", "hologramme", "mode"));
+            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo", "aura", "marchand", "solde", "hologramme", "mode", "sons"));
          } else if (var4.length == 2) {
             String var10 = var4[0].toLowerCase(Locale.ROOT);
             switch (var10) {
