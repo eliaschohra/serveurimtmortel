@@ -272,7 +272,7 @@ public final class Loots {
          () -> List.of(new ItemStack(Material.SADDLE), new ItemStack(Material.NAME_TAG), new ItemStack(Material.LEAD, 2))
       );
       this.simple("xp64", var4, 1.2, "Un stack de 64 fioles d'expérience", Material.EXPERIENCE_BOTTLE, 64);
-      this.add("kit_diamant", var4, 0.9, "Kit armure en diamant", Material.DIAMOND_CHESTPLATE, 1, () -> armor("DIAMOND"));
+      this.add("kit_diamant", var4, 0.45, "Kit armure en diamant", Material.DIAMOND_CHESTPLATE, 1, () -> armor("DIAMOND"));
       this.simple("epee_diamant", var4, 1.0, "Épée en diamant", Material.DIAMOND_SWORD, 1);
       this.add(
          "pioche_diamant",
@@ -1150,7 +1150,7 @@ public final class Loots {
             new ItemStack(Material.ARROW)
          )
       );
-      this.fun("armure_gala", var4, 0.8, "Armure de gala (diamant Protection IV)", Material.DIAMOND_CHESTPLATE, 1, () -> armorEnchanted("DIAMOND", 4, false));
+      this.fun("armure_gala", var4, 0.4, "Armure de gala (diamant Protection IV)", Material.DIAMOND_CHESTPLATE, 1, () -> armorEnchanted("DIAMOND", 4, false));
       this.fun(
          "ailes_bde",
          var4,
@@ -1381,12 +1381,12 @@ public final class Loots {
    }
 
    public static enum Tier {
-      COMMUN("Commun", "<#BFBFBF>", 40.0, Material.LIGHT_GRAY_DYE),
-      PEU_COMMUN("Peu commun", "<#55FF55>", 28.0, Material.LIME_DYE),
-      RARE("Rare", "<#4FC3FF>", 18.0, Material.LIGHT_BLUE_DYE),
-      EPIQUE("Épique", "<#C77DFF>", 9.5, Material.PURPLE_DYE),
-      LEGENDAIRE("Légendaire", "<#FFC93C>", 3.5, Material.ORANGE_DYE),
-      MYTHIQUE("Mythique", "<#FF2E93>", 1.0, Material.MAGENTA_DYE);
+      COMMUN("Commun", "<#BFBFBF>", 55.0, Material.LIGHT_GRAY_DYE),
+      PEU_COMMUN("Peu commun", "<#55FF55>", 27.0, Material.LIME_DYE),
+      RARE("Rare", "<#4FC3FF>", 12.0, Material.LIGHT_BLUE_DYE),
+      EPIQUE("Épique", "<#C77DFF>", 4.5, Material.PURPLE_DYE),
+      LEGENDAIRE("Légendaire", "<#FFC93C>", 1.2, Material.ORANGE_DYE),
+      MYTHIQUE("Mythique", "<#FF2E93>", 0.3, Material.MAGENTA_DYE);
 
       public final String label;
       public final String color;

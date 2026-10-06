@@ -13,6 +13,8 @@ whatsapp:
 
 # Astuces de Poulpy dans le chat (en minutes)
 astuces-toutes-les-minutes: 20
+# Astuces propres a chaque mode (skyblock, parcelles, parkour, lobby), dans le chat de ce mode.
+astuces-par-mode-toutes-les-minutes: 5
 
 # Rappel "/guide" de Poulpy (en minutes)
 rappel-guide-toutes-les-minutes: 120

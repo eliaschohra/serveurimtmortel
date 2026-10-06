@@ -41,6 +41,12 @@ public final class Fly implements Listener {
    }
 
    public void apply(Player var1) {
+      // Le fly gagne au /vote est un bonus de la survie : il ne marche pas
+      // sur les iles du skyblock (on volerait d'une ile a l'autre).
+      if (this.pl.worlds().zoneOf(var1) != Zone.SURVIE && !this.staffFly.contains(var1.getUniqueId())) {
+         return;
+      }
+
       if (this.pl.auth().isLogged(var1) && !this.pl.lobby().isLobby(var1.getWorld()) && this.survivalLike(var1)) {
          PlayerData var2 = this.pl.data().get(var1);
          boolean var3 = this.staffFly.contains(var1.getUniqueId()) || var2.flySeconds > 0 && !this.paused.contains(var1.getUniqueId());
@@ -105,7 +111,8 @@ public final class Fly implements Listener {
       for (Player var2 : this.pl.getServer().getOnlinePlayers()) {
          if (this.pl.auth().isLogged(var2) && !this.staffFly.contains(var2.getUniqueId())) {
             PlayerData var3 = this.pl.data().get(var2);
-            if (var3.flySeconds > 0 && !this.paused.contains(var2.getUniqueId()) && this.survivalLike(var2)) {
+            if (var3.flySeconds > 0 && !this.paused.contains(var2.getUniqueId()) && this.survivalLike(var2)
+               && this.pl.worlds().zoneOf(var2) == Zone.SURVIE) {
                this.apply(var2);
                var3.flySeconds--;
                var3.touch();

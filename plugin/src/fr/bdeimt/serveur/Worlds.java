@@ -376,7 +376,9 @@ public final class Worlds implements Listener {
 
       rule(w, false, "doFireTick", "fire_damage");
       rule(w, false, "mobGriefing", "mob_griefing");
-      rule(w, true, "keepInventory", "keep_inventory");
+      // Partout on garde son stuff en mourant, sauf sur les iles du skyblock :
+      // tomber dans le vide y est une vraie mort, comme dans le skyblock classique.
+      rule(w, zone != Zone.SKYBLOCK, "keepInventory", "keep_inventory");
       rule(w, false, "announceAdvancements", "announce_advancements");
       rule(w, false, "showDeathMessages", "show_death_messages");
       rule(w, zone.pvp, "pvp");
@@ -597,6 +599,7 @@ public final class Worlds implements Listener {
       p.setFlying(false);
       p.teleport(target);
       this.arrive(p, zone);
+      this.enforceModeLater(p);
 
       if (from.group.equals(zone.group)) {
          return true;
@@ -604,6 +607,11 @@ public final class Worlds implements Listener {
 
       Msg.raw(p, "<dark_gray>» <gray>Tu es maintenant dans " + zone.colored() + "<gray>.</gray>");
       Util.sound(p, "entity.enderman.teleport", 0.6F, 1.4F);
+      Bukkit.getScheduler().runTaskLater(this.pl, () -> {
+         if (p.isOnline() && this.zoneOf(p) == zone) {
+            this.pl.announcer().welcome(p, zone);
+         }
+      }, 30L);
       return true;
    }
 
@@ -643,11 +651,69 @@ public final class Worlds implements Listener {
       this.pl.tab().refresh(p);
    }
 
+   // ----------------------------------------------------------- mode de jeu
+
+   /**
+    * Remet le mode de jeu de la zone, un peu apres l'arrivee.
+    *
+    * <p>Multiverse impose lui aussi un mode de jeu a chaque changement de
+    * monde (survie par defaut), juste apres nous : sans ce second passage, on
+    * arrivait en survie dans les parcelles. On repasse donc deux fois.
+    */
+   public void enforceModeLater(Player p) {
+      for (long delay : new long[]{3L, 20L}) {
+         Bukkit.getScheduler().runTaskLater(this.pl, () -> this.enforceMode(p, null), delay);
+      }
+   }
+
+   private void enforceMode(Player p, Zone from) {
+      if (!p.isOnline() || p.isDead() || !this.pl.auth().isLogged(p)) {
+         return;
+      }
+
+      Zone zone = this.zoneOf(p);
+      GameMode wanted = zone.mode;
+
+      if (zone == Zone.SURVIE) {
+         // En survie, l'admin choisit son mode ; mais personne n'y garde le
+         // creatif des parcelles.
+         if (p.getGameMode() != GameMode.CREATIVE || this.pl.ranks().isAdmin(p) && from != Zone.PARCELLES) {
+            return;
+         }
+
+         wanted = GameMode.SURVIVAL;
+      }
+
+      if (p.getGameMode() != wanted && p.getGameMode() != GameMode.SPECTATOR) {
+         p.setGameMode(wanted);
+      }
+
+      if (wanted == GameMode.CREATIVE) {
+         p.setAllowFlight(true);
+      } else if (zone != Zone.SURVIE && !this.pl.ranks().isStaff(p)) {
+         p.setFlying(false);
+         p.setAllowFlight(false);
+      }
+   }
+
+   /** Quel que soit le moyen (portail, /mvtp, mort...), changer de monde remet le bon mode. */
+   @EventHandler(priority = EventPriority.MONITOR)
+   public void onWorldChange(org.bukkit.event.player.PlayerChangedWorldEvent e) {
+      Player p = e.getPlayer();
+      Zone from = this.zoneOf(e.getFrom());
+
+      for (long delay : new long[]{3L, 20L}) {
+         Bukkit.getScheduler().runTaskLater(this.pl, () -> this.enforceMode(p, from), delay);
+      }
+   }
+
    // ------------------------------------------------------------ protection
 
    /** L'admin en creatif peut retoucher n'importe quelle carte. */
    private boolean bypass(Player p) {
-      return p.getGameMode() == GameMode.CREATIVE && this.pl.ranks().isAdmin(p);
+      // Dans les parcelles tout le monde est en creatif : l'admin y suit les
+      // memes regles que les autres (chemins et parcelles d'autrui proteges).
+      return p.getGameMode() == GameMode.CREATIVE && this.pl.ranks().isAdmin(p) && this.zoneOf(p) != Zone.PARCELLES;
    }
 
    private boolean canBuild(Player p, Location at) {

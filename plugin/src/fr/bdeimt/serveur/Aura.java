@@ -179,7 +179,7 @@ public final class Aura implements Listener, CommandExecutor {
          };
          Util.sound(var1, var9, 1.0F, var3 >= 15 ? 1.0F : 1.4F);
          if (var3 >= 10 && var2 instanceof Player) {
-            Msg.broadcast(
+            Msg.broadcastSurvie(
                Msg.mm(
                      "<dark_gray>[</dark_gray><gradient:#FF9AC8:#FF2E93><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#FF5FAE><bold>LaPanthèreRose</bold></#FF5FAE> <dark_gray>»</dark_gray> <#FFD6EA>"
                         + var6

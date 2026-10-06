@@ -318,7 +318,8 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
          return true;
       }
 
-      String sub = args.length == 0 ? "info" : args[0].toLowerCase(Locale.ROOT);
+      // /parcelle tout court : on rentre chez soi (ou on apprend a en prendre une).
+      String sub = args.length == 0 ? "tp" : args[0].toLowerCase(Locale.ROOT);
 
       switch (sub) {
          case "creer", "create", "créer", "parcel" -> this.create(p);
@@ -331,6 +332,7 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
          case "vote", "voter" -> this.vote(p, args);
          case "top", "classement" -> this.top(p);
          case "info" -> this.info(p);
+         case "aide", "help", "?" -> this.help(p);
          default -> this.help(p);
       }
 
@@ -340,13 +342,16 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
    private void help(Player p) {
       Msg.raw(p, "<dark_gray>———— <#C48BFF>Les parcelles</#C48BFF> ————</dark_gray>");
       Msg.raw(p, " <#55FF88>/parcelle creer</#55FF88> <dark_gray>— prendre ta parcelle</dark_gray>");
-      Msg.raw(p, " <#55FF88>/parcelle tp</#55FF88> <gray>[joueur]</gray> <dark_gray>— aller chez toi ou chez quelqu'un</dark_gray>");
+      Msg.raw(p, " <#55FF88>/parcelle</#55FF88> <dark_gray>— aller sur ta parcelle, de n'importe où</dark_gray>");
+      Msg.raw(p, " <#55FF88>/parcelle tp</#55FF88> <gray>‹joueur›</gray> <dark_gray>— visiter la parcelle de quelqu'un</dark_gray>");
+      Msg.raw(p, " <#55FF88>/parcelle info</#55FF88> <dark_gray>— à qui est la parcelle où tu es</dark_gray>");
       Msg.raw(p, " <#55FF88>/parcelle invite</#55FF88> <gray>‹joueur›</gray> <dark_gray>— l'autoriser a construire</dark_gray>");
       Msg.raw(p, " <#55FF88>/parcelle retirer</#55FF88> <gray>‹joueur›</gray> <dark_gray>— lui retirer le droit</dark_gray>");
       Msg.raw(p, " <#55FF88>/parcelle ban</#55FF88> <gray>‹joueur›</gray> <dark_gray>— le bannir de chez toi</dark_gray>");
       Msg.raw(p, " <#55FF88>/parcelle vote</#55FF88> <gray>‹joueur›</gray> <dark_gray>— une voix par jour</dark_gray>");
       Msg.raw(p, " <#55FF88>/parcelle top</#55FF88> <dark_gray>— les parcelles les plus aimees</dark_gray>");
       Msg.raw(p, " <#55FF88>/parcelle supprimer</#55FF88> <dark_gray>— rendre ta parcelle</dark_gray>");
+      Msg.raw(p, "<gray> Créatif : tu ne construis que chez toi et chez ceux qui t'invitent.</gray>");
    }
 
    private void create(Player p) {
@@ -377,11 +382,6 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
    }
 
    private void goHome(Player p, String[] args) {
-      if (this.pl.worlds().zoneOf(p) != Zone.PARCELLES) {
-         this.pl.worlds().send(p, Zone.PARCELLES);
-         return;
-      }
-
       Plots.Plot target;
 
       if (args.length >= 2) {
@@ -402,15 +402,243 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
          target = this.plotOf(p.getUniqueId());
 
          if (target == null) {
-            Msg.err(p, "Tu n'as pas encore de parcelle. <white>/parcelle creer</white>");
+            target = this.guestOf(p.getUniqueId());
+         }
+
+         if (target == null) {
+            if (this.pl.worlds().zoneOf(p) != Zone.PARCELLES) {
+               this.pl.worlds().send(p, Zone.PARCELLES);
+            }
+
+            Msg.err(p, "Tu n'as pas encore de parcelle.");
+            Msg.raw(p, "<gray>   Prends-en une : <click:run_command:'/parcelle creer'><#55FF88><u>/parcelle creer</u></#55FF88></click>   ·   toutes les commandes : <white>/parcelle aide</white></gray>");
             return;
          }
+      }
+
+      // Depuis un autre mode de jeu : on passe d'abord par l'entree des
+      // parcelles (inventaire, mode creatif), puis on file sur la parcelle.
+      if (this.pl.worlds().zoneOf(p) != Zone.PARCELLES && !this.pl.worlds().send(p, Zone.PARCELLES)) {
+         return;
       }
 
       Location center = this.center(target);
       if (center != null) {
          p.teleport(center);
          Msg.ok(p, "Te voilà sur la parcelle de <white>" + target.ownerName + "</white>.");
+      }
+   }
+
+   /** La parcelle d'un ami ou l'on a ete invite, ou null. */
+   public Plots.Plot guestOf(UUID uuid) {
+      for (Plots.Plot plot : this.plots.values()) {
+         if (plot.members.contains(uuid)) {
+            return plot;
+         }
+      }
+
+      return null;
+   }
+
+   // ------------------------------------------------------------ protections
+
+   /**
+    * Tout le monde est en creatif ici : poser et casser passent deja par
+    * {@link #canBuild}, mais le creatif ouvre bien d'autres portes. On ferme
+    * celles qui permettraient d'abimer la parcelle d'un autre ou les chemins.
+    */
+   private boolean protectedFor(Player p, Location at) {
+      return at != null
+         && this.pl.worlds().zoneOf(at.getWorld()) == Zone.PARCELLES
+         && !this.canBuild(p, at);
+   }
+
+   private boolean inPlots(org.bukkit.World w) {
+      return this.pl.worlds().zoneOf(w) == Zone.PARCELLES;
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onBucket(org.bukkit.event.player.PlayerBucketEmptyEvent e) {
+      if (this.protectedFor(e.getPlayer(), e.getBlock().getLocation())) {
+         e.setCancelled(true);
+         Msg.err(e.getPlayer(), "Ce n'est pas ta parcelle.");
+      }
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onBucketFill(org.bukkit.event.player.PlayerBucketFillEvent e) {
+      if (this.protectedFor(e.getPlayer(), e.getBlock().getLocation())) {
+         e.setCancelled(true);
+      }
+   }
+
+   /** Clic droit sur un bloc d'ailleurs : pas de coffre, pas d'oeuf, pas de briquet. */
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW)
+   public void onInteract(org.bukkit.event.player.PlayerInteractEvent e) {
+      if (e.getClickedBlock() == null || !this.protectedFor(e.getPlayer(), e.getClickedBlock().getLocation())) {
+         return;
+      }
+
+      if (e.getAction() == org.bukkit.event.block.Action.PHYSICAL) {
+         // Les plaques de pression et le fil restent utilisables, mais on ne pietine pas les cultures.
+         if (e.getClickedBlock().getType() == Material.FARMLAND) {
+            e.setCancelled(true);
+         }
+
+         return;
+      }
+
+      // Un bloc a poser : c'est l'endroit ou il atterrit qui compte, et
+      // BlockPlaceEvent s'en charge (on peut poser contre le bord du chemin).
+      // Tout le reste (oeufs, poudre d'os, seaux...) est refuse ici.
+      if (e.getItem() == null || !e.getItem().getType().isBlock()) {
+         e.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
+      }
+
+      if (e.getClickedBlock().getState() instanceof org.bukkit.inventory.InventoryHolder
+         || e.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
+         e.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
+      }
+   }
+
+   /** Cadres, tableaux, supports d'armure, animaux : on ne touche pas chez les autres. */
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onEntityHit(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+      if (e.getEntity() instanceof Player || !this.inPlots(e.getEntity().getWorld())) {
+         return;
+      }
+
+      Player p = e.getDamager() instanceof Player d ? d
+         : e.getDamager() instanceof org.bukkit.entity.Projectile proj && proj.getShooter() instanceof Player d2 ? d2 : null;
+
+      if (p != null && this.protectedFor(p, e.getEntity().getLocation())) {
+         e.setCancelled(true);
+      }
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onEntityUse(org.bukkit.event.player.PlayerInteractEntityEvent e) {
+      if (!(e.getRightClicked() instanceof Player) && this.protectedFor(e.getPlayer(), e.getRightClicked().getLocation())) {
+         e.setCancelled(true);
+      }
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onArmorStand(org.bukkit.event.player.PlayerArmorStandManipulateEvent e) {
+      if (this.protectedFor(e.getPlayer(), e.getRightClicked().getLocation())) {
+         e.setCancelled(true);
+      }
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onHangingBreak(org.bukkit.event.hanging.HangingBreakByEntityEvent e) {
+      if (!this.inPlots(e.getEntity().getWorld())) {
+         return;
+      }
+
+      if (e.getRemover() instanceof Player p) {
+         if (this.protectedFor(p, e.getEntity().getLocation())) {
+            e.setCancelled(true);
+         }
+      } else {
+         e.setCancelled(true);
+      }
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onHangingPlace(org.bukkit.event.hanging.HangingPlaceEvent e) {
+      if (e.getPlayer() != null && this.protectedFor(e.getPlayer(), e.getEntity().getLocation())) {
+         e.setCancelled(true);
+      }
+   }
+
+   /** Pas d'explosion du tout : une TNT detruirait les voisins et les chemins. */
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onExplode(org.bukkit.event.entity.EntityExplodeEvent e) {
+      if (this.inPlots(e.getLocation().getWorld())) {
+         e.blockList().clear();
+      }
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onBlockExplode(org.bukkit.event.block.BlockExplodeEvent e) {
+      if (this.inPlots(e.getBlock().getWorld())) {
+         e.blockList().clear();
+      }
+   }
+
+   /** L'eau et la lave ne coulent pas hors de leur parcelle. */
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onFlow(org.bukkit.event.block.BlockFromToEvent e) {
+      if (this.inPlots(e.getBlock().getWorld()) && this.at(e.getBlock().getLocation()) != this.at(e.getToBlock().getLocation())) {
+         e.setCancelled(true);
+      }
+   }
+
+   /** Les pistons ne poussent rien hors de leur parcelle. */
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onPiston(org.bukkit.event.block.BlockPistonExtendEvent e) {
+      if (!this.inPlots(e.getBlock().getWorld())) {
+         return;
+      }
+
+      Plots.Plot home = this.at(e.getBlock().getLocation());
+
+      for (org.bukkit.block.Block moved : e.getBlocks()) {
+         if (this.at(moved.getRelative(e.getDirection()).getLocation()) != home) {
+            e.setCancelled(true);
+            return;
+         }
+      }
+
+      if (this.at(e.getBlock().getRelative(e.getDirection()).getLocation()) != home) {
+         e.setCancelled(true);
+      }
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onPistonPull(org.bukkit.event.block.BlockPistonRetractEvent e) {
+      if (!this.inPlots(e.getBlock().getWorld())) {
+         return;
+      }
+
+      Plots.Plot home = this.at(e.getBlock().getLocation());
+
+      for (org.bukkit.block.Block moved : e.getBlocks()) {
+         if (this.at(moved.getLocation()) != home) {
+            e.setCancelled(true);
+            return;
+         }
+      }
+   }
+
+   /** Ni feu qui se propage, ni arbre ou champignon qui deborde chez le voisin. */
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onIgnite(org.bukkit.event.block.BlockIgniteEvent e) {
+      if (!this.inPlots(e.getBlock().getWorld())) {
+         return;
+      }
+
+      if (e.getPlayer() == null ? e.getCause() != org.bukkit.event.block.BlockIgniteEvent.IgniteCause.FLINT_AND_STEEL : this.protectedFor(e.getPlayer(), e.getBlock().getLocation())) {
+         e.setCancelled(true);
+      }
+   }
+
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onGrow(org.bukkit.event.world.StructureGrowEvent e) {
+      if (!this.inPlots(e.getWorld())) {
+         return;
+      }
+
+      Plots.Plot home = this.at(e.getLocation());
+      e.getBlocks().removeIf(state -> this.at(state.getLocation()) != home);
+   }
+
+   /** Un bloc qui tombe (sable, enclume) ne finit pas sur le chemin. */
+   @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOW, ignoreCancelled = true)
+   public void onFallingBlock(org.bukkit.event.entity.EntityChangeBlockEvent e) {
+      if (this.inPlots(e.getBlock().getWorld()) && e.getEntity() instanceof org.bukkit.entity.FallingBlock && this.at(e.getBlock().getLocation()) == null) {
+         e.setCancelled(true);
       }
    }
 
@@ -673,7 +901,7 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
       List<String> out = new ArrayList<>();
 
       if (args.length == 1) {
-         out.addAll(List.of("creer", "tp", "invite", "retirer", "ban", "unban", "vote", "top", "supprimer", "info"));
+         out.addAll(List.of("creer", "tp", "invite", "retirer", "ban", "unban", "vote", "top", "supprimer", "info", "aide"));
          String start = args[0].toLowerCase(Locale.ROOT);
          out.removeIf(s -> !s.startsWith(start));
       } else if (args.length == 2) {

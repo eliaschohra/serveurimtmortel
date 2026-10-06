@@ -330,6 +330,12 @@ récupération.
   Pour faire taire SkinsRestorer, on va vider la ligne dans ses propres
   fichiers de traduction au démarrage (`ThirdParty`).
 
+### Multiverse et le mode de jeu
+Multiverse-Core remet le mode de jeu de chaque monde (survie par défaut) **juste après** notre téléportation. Résultat : on arrivait en survie dans les parcelles. `Worlds.enforceModeLater` repasse 3 puis 20 ticks après chaque changement de monde (`PlayerChangedWorldEvent`).
+
+### Hologrammes non sauvegardés
+Un `TextDisplay` avec `setPersistent(false)` disparaît dès que son chunk se décharge. C'est pour ça que le panneau du lobby skyblock était invisible. Il faut **toujours** un ticket de chunk (`addPluginChunkTicket`) et une vérification régulière qui le remet s'il manque (`SkyHub.tick`).
+
 ### Système
 
 - **SELinux** (Oracle Linux) empêche systemd de lancer un script du dossier

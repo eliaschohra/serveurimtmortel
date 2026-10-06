@@ -177,16 +177,16 @@ public final class Votes implements CommandExecutor {
                .append(Msg.mm(" <#FFD6EA>vient de gagner</#FFD6EA> "))
                .append(Msg.mm(var2.tier.styled("<bold>" + var2.name + "</bold>")).hoverEvent(HoverEvent.showText(var6)))
                .append(Msg.mm(" <#FFD6EA>au /vote ! <dark_gray>(" + Util.pct(var2.chance) + " de chance)</dark_gray>"));
-            Msg.broadcast(var7);
+            Msg.broadcastSurvie(var7);
 
             for (Player var9 : Bukkit.getOnlinePlayers()) {
-               if (!var9.equals(var1) && this.pl.auth().isLogged(var9)) {
+               if (!var9.equals(var1) && this.pl.auth().isLogged(var9) && this.pl.worlds().zoneOf(var9) == Zone.SURVIE) {
                   Util.sound(var9, "ui.toast.challenge_complete", 0.6F, 1.2F);
                }
             }
 
             if (var2.tier == Loots.Tier.MYTHIQUE) {
-               Util.soundAll("entity.ender_dragon.growl", 0.5F, 1.3F);
+               Util.soundSurvie("entity.ender_dragon.growl", 0.5F, 1.3F);
             }
          }
       }

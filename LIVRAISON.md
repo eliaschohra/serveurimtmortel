@@ -1,3 +1,13 @@
+# BDEIMT v3.2 — mise à jour
+
+1. Dans `plugins/`, remplace `BDEIMT.jar` (un seul fichier BDEIMT), puis `/stop`.
+2. Sons : envoie le nouveau `sons-bde.zip` sur mc-packs.net, puis colle le lien dans `sons.pack-url` et le SHA-1 dans `sons.pack-sha1` (`plugins/BDEIMT/config.yml`). Ensuite `/stop`.
+3. Les îles déjà créées gardent leur ancienne forme. Pour avoir la nouvelle : `/ile supprimer confirmer`, puis `/ile creer`.
+
+Nouveautés : nouvelle île Standard Skyblock, mort classique dans le vide (réapparition sur l'île), bordure autour de chaque île, panneau du lobby skyblock qui ne disparaît plus (avec des astuces qui changent), astuces par mode dans le chat, `/parcelle` qui marche de partout, créatif forcé et protégé dans les parcelles, bâton de retour au parkour, Traq annoncé seulement en survie, lots rares moins fréquents, son « ascension ».
+
+---
+
 # BDEIMT v3.0 — installation
 
 Tout se fait par **FileZilla** et **en jeu**.

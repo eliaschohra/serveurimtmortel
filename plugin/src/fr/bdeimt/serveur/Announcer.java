@@ -33,6 +33,113 @@ public final class Announcer implements CommandExecutor {
       "Respect, entraide et pas de grief : c'est ce qui fait un bon serveur. Merci à vous !"
    );
 
+   /** Les astuces de chaque mode de jeu, repetees dans le chat de ce mode seulement. */
+   private static final java.util.Map<String, List<String>> MODE_TIPS = java.util.Map.of(
+      "lobby", List.of(
+         "Clic droit sur la <white>boussole</white> (au milieu de ta barre) pour choisir un mode de jeu. Tu peux aussi passer dans un portail.",
+         "<white>/hub</white> te ramène ici depuis n'importe quel mode de jeu.",
+         "La musique du lobby te gêne ? <white>/musique</white> la coupe (et la remet).",
+         "Perdu ? <white>/guide</white> ouvre le guide complet du serveur."
+      ),
+      "parkour", List.of(
+         "Les <#FFD25E>plaques en or</#FFD25E> sont les points de contrôle : passe dessus pour enregistrer ta progression.",
+         "Tu tombes de plus de 8 blocs ? Retour automatique à ta dernière plaque en or.",
+         "Le <#FFD25E>bâton</#FFD25E> au milieu de ta barre te ramène à ta dernière plaque d'un clic. <white>/parkour retour</white> fait pareil.",
+         "<white>/parkour recommencer</white> pour repartir du début et relancer le chrono.",
+         "Le classement est à droite de l'écran : d'abord le plus loin, puis le plus rapide.",
+         "<white>/hub</white> pour revenir au lobby."
+      ),
+      "skyblock", List.of(
+         "Pour aller au <#7FE3FF>lobby du skyblock</#7FE3FF> (marchands, marché) : <white>/ile hub</white>. Pour rentrer sur ton île : <white>/ile</white>.",
+         "Pas encore d'île ? <white>/ile creer</white>. Une seule par personne.",
+         "Jouer à plusieurs : <white>/ile invite ‹pseudo›</white>. <#FF5555>Attention : celui qui accepte perd sa propre île, effacée pour toujours.</#FF5555>",
+         "<#FF5555>Tomber dans le vide = mort.</#FF5555> Ton stuff est perdu, tu réapparais sur ton île. Pose des blocs au bord !",
+         "La lave du coffre et l'eau de la glace font un générateur de pierre. Ne fais surtout pas tomber le seau de lave !",
+         "Les marchands du lobby skyblock (<white>/ile hub</white>) achètent tes récoltes. Ton argent : <white>/solde</white>.",
+         "<white>/marche</white> pour acheter aux autres joueurs, <white>/marche vendre ‹prix›</white> pour vendre l'objet que tu tiens.",
+         "Une voix par jour pour l'île de quelqu'un : <white>/vote ‹pseudo›</white>. Le classement est à droite de l'écran.",
+         "Chaque île a sa bordure : impossible d'aller chez les autres à pied. <white>/ile tp ‹pseudo›</white> pour visiter.",
+         "<white>/tpa ‹pseudo›</white> pour rejoindre un ami, <white>/echange ‹pseudo›</white> pour troquer sans arnaque.",
+         "Ton île a disparu ou tu veux repartir de zéro ? <white>/ile supprimer confirmer</white> puis <white>/ile creer</white>."
+      ),
+      "parcelles", List.of(
+         "<white>/parcelle creer</white> pour prendre ta parcelle, puis <white>/parcelle</white> pour y retourner à tout moment.",
+         "Construire à plusieurs : <white>/parcelle invite ‹pseudo›</white>. Il pourra construire chez toi, et garde sa propre parcelle.",
+         "Tu es en créatif, mais seulement chez toi et chez ceux qui t'ont invité. Les chemins et les autres parcelles sont protégés.",
+         "Visiter la parcelle de quelqu'un : <white>/parcelle tp ‹pseudo›</white>.",
+         "Une voix par jour : <white>/parcelle vote ‹pseudo›</white>. Le classement : <white>/parcelle top</white>.",
+         "Ce que tu as ici reste ici : ton inventaire créatif ne te suit pas dans les autres modes."
+      )
+   );
+   private final java.util.Map<String, Integer> modeTipIndex = new java.util.concurrent.ConcurrentHashMap<>();
+
+   /** Une astuce par mode de jeu, dans le chat de ce mode seulement. */
+   public void modeTip() {
+      for (java.util.Map.Entry<String, List<String>> entry : MODE_TIPS.entrySet()) {
+         boolean someone = false;
+
+         for (Player p : Bukkit.getOnlinePlayers()) {
+            if (this.pl.auth().isLogged(p) && this.pl.worlds().zoneOf(p).group.equals(entry.getKey())) {
+               someone = true;
+               break;
+            }
+         }
+
+         if (someone) {
+            int i = this.modeTipIndex.merge(entry.getKey(), 1, Integer::sum) - 1;
+            Msg.poulpyGroup(entry.getKey(), "<#FFC93C>Astuce :</#FFC93C> " + entry.getValue().get(i % entry.getValue().size()));
+         }
+      }
+   }
+
+   /** Les astuces du moment pour un mode, pour les hologrammes qui tournent. */
+   public static List<String> tipsOf(String group) {
+      return MODE_TIPS.getOrDefault(group, List.of());
+   }
+
+   /** Le petit mot d'accueil en arrivant dans un mode de jeu. */
+   public void welcome(Player p, Zone zone) {
+      String line = "<dark_gray>" + "─".repeat(38) + "</dark_gray>";
+
+      switch (zone) {
+         case SKYHUB, SKYBLOCK -> {
+            boolean hasIsland = this.pl.skyblock().homeIslandOf(p.getUniqueId()) != null;
+            Msg.raw(p, line);
+            Msg.raw(p, "<#7FE3FF><bold>Bienvenue dans le Skyblock !</bold></#7FE3FF>");
+            Msg.raw(p, hasIsland
+               ? "<gray>• Rentrer sur ton île : <white>/ile</white></gray>"
+               : "<gray>• Fabrique ton île : <click:run_command:'/ile creer'><#55FF88><u>/ile creer</u></#55FF88></click> <dark_gray>(une seule par personne)</dark_gray></gray>");
+            Msg.raw(p, "<gray>• Revenir au <#7FE3FF>lobby du skyblock</#7FE3FF> (marchands, marché) : <white>/ile hub</white></gray>");
+            Msg.raw(p, "<gray>• Jouer à plusieurs : <white>/ile invite ‹pseudo›</white> <#FF5555>(rejoindre efface ta propre île !)</#FF5555></gray>");
+            Msg.raw(p, "<gray>• <#FF5555>Tomber dans le vide = mort</#FF5555> : stuff perdu, retour sur ton île.</gray>");
+            Msg.raw(p, "<gray>• Toutes les commandes : <white>/ile aide</white>  ·  le lobby : <white>/hub</white></gray>");
+            Msg.raw(p, line);
+         }
+         case PARCELLES -> {
+            boolean hasPlot = this.pl.plots().plotOf(p.getUniqueId()) != null;
+            Msg.raw(p, line);
+            Msg.raw(p, "<#C48BFF><bold>Bienvenue dans les Parcelles !</bold></#C48BFF> <gray>(créatif)</gray>");
+            Msg.raw(p, hasPlot
+               ? "<gray>• Aller sur ta parcelle : <white>/parcelle</white></gray>"
+               : "<gray>• Prends ta parcelle : <click:run_command:'/parcelle creer'><#55FF88><u>/parcelle creer</u></#55FF88></click></gray>");
+            Msg.raw(p, "<gray>• Construire à plusieurs : <white>/parcelle invite ‹pseudo›</white></gray>");
+            Msg.raw(p, "<gray>• On ne construit que chez soi et chez ceux qui nous invitent.</gray>");
+            Msg.raw(p, "<gray>• Toutes les commandes : <white>/parcelle aide</white>  ·  le lobby : <white>/hub</white></gray>");
+            Msg.raw(p, line);
+         }
+         case PARKOUR -> {
+            Msg.raw(p, line);
+            Msg.raw(p, "<#FFD25E><bold>Bienvenue sur le Parkour du mois !</bold></#FFD25E>");
+            Msg.raw(p, "<gray>• Les <#FFD25E>plaques en or</#FFD25E> = points de contrôle.</gray>");
+            Msg.raw(p, "<gray>• Tu tombes ? Retour à la dernière plaque. Le <#FFD25E>bâton</#FFD25E> t'y ramène aussi.</gray>");
+            Msg.raw(p, "<gray>• <white>/parkour recommencer</white> pour repartir du début  ·  <white>/hub</white> pour sortir</gray>");
+            Msg.raw(p, line);
+         }
+         default -> {
+         }
+      }
+   }
+
    public Announcer(BDEIMT var1) {
       this.pl = var1;
    }
@@ -107,23 +214,25 @@ public final class Announcer implements CommandExecutor {
       var2.add(
          "<gold><bold>Le parkour du mois</bold></gold>\n\n"
             + "<black>Une carte commune, sans stuff ni coups.</black>\n\n"
-            + "<black>Chaque point de controle te sauve : si tu tombes, tu y reviens.</black>\n\n"
+            + "<black>Les plaques en or sont les points de controle : si tu tombes, tu y reviens. Le baton aussi.</black>\n\n"
             + "<dark_green>/parkour</dark_green> <black>le classement</black>\n"
+            + "<dark_green>/parkour retour</dark_green>\n"
             + "<dark_green>/parkour recommencer</dark_green>\n\n"
             + "<black>Le plus loin gagne, puis le plus rapide.</black>"
       );
       var2.add(
          "<dark_purple><bold>Les parcelles</bold></dark_purple>\n\n"
-            + "<black>Une parcelle en creatif, rien que pour toi. Une seule.</black>\n\n"
-            + "<dark_green>/parcelle creer</dark_green>\n<dark_green>/parcelle tp</dark_green> <black>[joueur]</black>\n"
+            + "<black>En creatif, mais on ne construit que chez soi et chez ceux qui invitent.</black>\n\n"
+            + "<dark_green>/parcelle creer</dark_green>\n<dark_green>/parcelle</dark_green> <black>y aller</black>\n<dark_green>/parcelle tp</dark_green> <black>‹joueur›</black>\n"
             + "<dark_green>/parcelle invite</dark_green>\n<dark_green>/parcelle ban</dark_green>\n"
             + "<dark_green>/parcelle vote</dark_green> <black>une voix par jour</black>\n<dark_green>/parcelle top</dark_green>"
       );
       var2.add(
          "<dark_aqua><bold>Le skyblock</bold></dark_aqua>\n\n"
             + "<dark_green>/ile creer</dark_green> <black>ton ile</black>\n<dark_green>/ile</dark_green> <black>rentrer</black>\n"
-            + "<dark_green>/ile invite</dark_green> <black>‹joueur›</black>\n\n"
-            + "<dark_red>Rejoindre l'ile d'un ami efface la tienne.</dark_red>\n\n"
+            + "<dark_green>/ile hub</dark_green> <black>le lobby skyblock</black>\n"
+            + "<dark_green>/ile invite</dark_green> <black>‹joueur›</black>\n"
+            + "<dark_red>Rejoindre l'ile d'un ami efface la tienne. Le vide tue : stuff perdu.</dark_red>\n"
             + "<dark_green>/vote</dark_green> <black>‹pseudo› une voix pour son ile</black>\n"
             + "<dark_green>/marche</dark_green> <black>vendre et acheter</black>\n"
             + "<dark_green>/solde</dark_green> <black>ton argent</black>"
@@ -182,8 +291,9 @@ public final class Announcer implements CommandExecutor {
 
    public void tip() {
       if (this.onlineLogged() != 0) {
+         // Les astuces de la survie ne concernent que la survie.
          String var1 = TIPS.get(this.tipIndex++ % TIPS.size());
-         Msg.poulpyAll("<#FFC93C>Astuce :</#FFC93C> " + var1);
+         Msg.poulpySurvie("<#FFC93C>Astuce :</#FFC93C> " + var1);
       }
    }
 

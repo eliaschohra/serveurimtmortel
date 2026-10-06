@@ -144,6 +144,57 @@ public final class Msg {
       Bukkit.getConsoleSender().sendMessage(var0);
    }
 
+   /** Comme broadcast, mais seulement pour ceux qui sont dans la survie. */
+   public static void broadcastSurvie(Component var0) {
+      BDEIMT var1 = BDEIMT.get();
+
+      for (Player var3 : Bukkit.getOnlinePlayers()) {
+         if (var1.auth().isLogged(var3) && var1.worlds().zoneOf(var3) == Zone.SURVIE) {
+            var3.sendMessage(var0);
+         }
+      }
+
+      Bukkit.getConsoleSender().sendMessage(var0);
+   }
+
+   /** Un message de LaPanthereRose, pour la survie seulement. */
+   public static void panthereSurvie(String var0, TagResolver... var1) {
+      broadcastSurvie(
+         mm(
+            "<dark_gray>[</dark_gray><gradient:#FF9AC8:#FF2E93><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#FF5FAE><bold>LaPanthèreRose</bold></#FF5FAE> <dark_gray>»</dark_gray> <#FFD6EA>"
+               + var0,
+            var1
+         )
+      );
+   }
+
+   /** Un message de Poulpy, pour la survie seulement. */
+   public static void poulpySurvie(String var0, TagResolver... var1) {
+      broadcastSurvie(
+         mm(
+            "<dark_gray>[</dark_gray><gradient:#4FC3FF:#1E6BFF><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#2E8BFF><bold>Poulpy</bold></#2E8BFF> <dark_gray>»</dark_gray> <#CFEAFF>"
+               + var0,
+            var1
+         )
+      );
+   }
+
+   /** Un message de Poulpy pour ceux d'un groupe de zones (lobby, skyblock...). */
+   public static void poulpyGroup(String group, String var0, TagResolver... var1) {
+      BDEIMT pl = BDEIMT.get();
+      Component c = mm(
+         "<dark_gray>[</dark_gray><gradient:#4FC3FF:#1E6BFF><bold>IA</bold></gradient><dark_gray>]</dark_gray> <#2E8BFF><bold>Poulpy</bold></#2E8BFF> <dark_gray>»</dark_gray> <#CFEAFF>"
+            + var0,
+         var1
+      );
+
+      for (Player p : Bukkit.getOnlinePlayers()) {
+         if (pl.auth().isLogged(p) && pl.worlds().zoneOf(p).group.equals(group)) {
+            p.sendMessage(c);
+         }
+      }
+   }
+
    public static void staff(String var0, TagResolver... var1) {
       Component var2 = mm("<dark_gray>[</dark_gray><gold>Staff</gold><dark_gray>]</dark_gray> <gray>" + var0, var1);
       BDEIMT var3 = BDEIMT.get();

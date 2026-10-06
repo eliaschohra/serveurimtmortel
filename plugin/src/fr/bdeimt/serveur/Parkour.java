@@ -104,6 +104,109 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
       this.pl = pl;
       this.file = new File(pl.getDataFolder(), "parkour.yml");
       this.holoKey = new NamespacedKey(pl, "parkour_holo");
+      this.stickKey = new NamespacedKey(pl, "parkour_baton");
+   }
+
+   // ----------------------------------------------------------------- baton
+
+   /** La case du baton de retour, au milieu de la barre. */
+   private static final int STICK_SLOT = 4;
+   private final NamespacedKey stickKey;
+   private final Map<UUID, Long> stickUse = new ConcurrentHashMap<>();
+
+   /** Le baton qui ramene a la derniere plaque en or. */
+   private org.bukkit.inventory.ItemStack stick() {
+      org.bukkit.inventory.ItemStack item = Util.item(
+         org.bukkit.Material.BLAZE_ROD,
+         1,
+         "<#FFD25E><bold>Retour au point de contrôle</bold></#FFD25E>",
+         "<gray>Clic (droit ou gauche) : retour à ta</gray>",
+         "<gray>dernière plaque en or.</gray>",
+         "<dark_gray>Tu le gardes tant que tu es sur le parkour.</dark_gray>"
+      );
+      item.editMeta(meta -> meta.getPersistentDataContainer().set(this.stickKey, PersistentDataType.BYTE, (byte)1));
+      return item;
+   }
+
+   private boolean isStick(org.bukkit.inventory.ItemStack item) {
+      return item != null
+         && item.hasItemMeta()
+         && item.getItemMeta().getPersistentDataContainer().has(this.stickKey, PersistentDataType.BYTE);
+   }
+
+   /** Remet le baton s'il n'est plus dans l'inventaire. */
+   private void ensureStick(Player p) {
+      for (org.bukkit.inventory.ItemStack item : p.getInventory().getContents()) {
+         if (this.isStick(item)) {
+            return;
+         }
+      }
+
+      p.getInventory().setItem(STICK_SLOT, this.stick());
+   }
+
+   /** Le baton disparait des qu'on quitte le parkour. */
+   private void removeStick(Player p) {
+      org.bukkit.inventory.ItemStack[] contents = p.getInventory().getContents();
+
+      for (int i = 0; i < contents.length; i++) {
+         if (this.isStick(contents[i])) {
+            p.getInventory().setItem(i, null);
+         }
+      }
+   }
+
+   /** Retour a la derniere plaque en or. */
+   public void backToCheckpoint(Player p) {
+      Location back = this.checkpointOf(p);
+
+      if (back != null) {
+         p.setFallDistance(0.0F);
+         p.setVelocity(new org.bukkit.util.Vector());
+         p.teleport(back);
+         Util.sound(p, "entity.enderman.teleport", 0.5F, 1.6F);
+         p.sendActionBar(Msg.mm("<#FFD25E>Retour au dernier point de contrôle</#FFD25E>"));
+      }
+   }
+
+   @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+   public void onStick(org.bukkit.event.player.PlayerInteractEvent e) {
+      // Marcher sur une plaque (PHYSICAL) avec le baton en main ne compte pas.
+      if (!this.isStick(e.getItem()) || e.getAction() == org.bukkit.event.block.Action.PHYSICAL) {
+         return;
+      }
+
+      e.setCancelled(true);
+      Player p = e.getPlayer();
+
+      if (this.pl.worlds().zoneOf(p) != Zone.PARKOUR) {
+         return;
+      }
+
+      long now = System.currentTimeMillis();
+      Long last = this.stickUse.get(p.getUniqueId());
+
+      if (last != null && now - last < 800L) {
+         return;
+      }
+
+      this.stickUse.put(p.getUniqueId(), now);
+      this.backToCheckpoint(p);
+   }
+
+   /** Ni dans l'autre main, ni par terre. */
+   @EventHandler(ignoreCancelled = true)
+   public void onSwap(org.bukkit.event.player.PlayerSwapHandItemsEvent e) {
+      if (this.isStick(e.getMainHandItem()) || this.isStick(e.getOffHandItem())) {
+         e.setCancelled(true);
+      }
+   }
+
+   @EventHandler(ignoreCancelled = true)
+   public void onDropStick(org.bukkit.event.player.PlayerDropItemEvent e) {
+      if (this.isStick(e.getItemDrop().getItemStack())) {
+         e.setCancelled(true);
+      }
    }
 
    public String mapName() {
@@ -231,7 +334,10 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
       }
 
       p.setFallDistance(0.0F);
+      this.ensureStick(p);
+      p.getInventory().setHeldItemSlot(STICK_SLOT);
       Msg.poulpy(p, "C'est parti pour <white>" + this.mapName + "</white> ! Le chrono tourne.");
+      Msg.poulpy(p, "Les <#FFD25E>plaques en or</#FFD25E> sont les points de contrôle. Tu tombes ? Retour à la dernière. Le <#FFD25E>bâton</#FFD25E> en main t'y ramène aussi d'un clic.");
       Util.sound(p, "block.note_block.pling", 0.8F, 1.6F);
    }
 
@@ -360,6 +466,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
    @EventHandler
    public void onQuit(PlayerQuitEvent e) {
       this.runs.remove(e.getPlayer().getUniqueId());
+      this.stickUse.remove(e.getPlayer().getUniqueId());
    }
 
    // ------------------------------------------------------------- affichage
@@ -367,11 +474,19 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
    /** Le panneau lateral, rafraichi chaque seconde pour les gens du parkour. */
    public void tick() {
       for (Player p : Bukkit.getOnlinePlayers()) {
-         if (this.pl.auth().isLogged(p) && this.pl.worlds().zoneOf(p) == Zone.PARKOUR) {
+         if (!this.pl.auth().isLogged(p)) {
+            continue;
+         }
+
+         if (this.pl.worlds().zoneOf(p) == Zone.PARKOUR) {
             try {
+               this.ensureStick(p);
                this.sidebar(p);
             } catch (Throwable t) {
             }
+         } else {
+            // On ne repart pas avec le baton dans un autre monde.
+            this.removeStick(p);
          }
       }
    }
@@ -561,6 +676,16 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
          }
       }
 
+      if (args.length >= 1 && (args[0].equalsIgnoreCase("retour") || args[0].equalsIgnoreCase("checkpoint"))) {
+         if (this.pl.worlds().zoneOf(p) != Zone.PARKOUR) {
+            Msg.err(p, "Il faut être sur le parkour.");
+         } else {
+            this.backToCheckpoint(p);
+         }
+
+         return true;
+      }
+
       if (args.length >= 1 && (args[0].equalsIgnoreCase("recommencer") || args[0].equalsIgnoreCase("restart"))) {
          if (this.pl.worlds().zoneOf(p) != Zone.PARKOUR) {
             Msg.err(p, "Il faut être sur le parkour.");
@@ -589,6 +714,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
       }
 
       Msg.raw(p, "<gray>/parkour recommencer <dark_gray>— repartir du début</dark_gray></gray>");
+      Msg.raw(p, "<gray>/parkour retour <dark_gray>— revenir à ta dernière plaque en or (comme le bâton)</dark_gray></gray>");
       return true;
    }
 
@@ -597,6 +723,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
       List<String> out = new ArrayList<>();
       if (args.length == 1) {
          out.add("recommencer");
+         out.add("retour");
          if (sender instanceof Player p && this.pl.ranks().isAdmin(p)) {
             out.addAll(List.of("point", "annuler", "nom", "plancher", "chute", "reset"));
          }

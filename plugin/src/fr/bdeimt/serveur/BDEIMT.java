@@ -370,6 +370,7 @@ public final class BDEIMT extends JavaPlugin {
          this.tab.tick();
          this.hub.musicTick();
          this.skyhub.tick();
+         this.skyblock.tick();
          this.parkour.tick();
          this.plots.tick();
       }, 20L, 20L);
@@ -390,6 +391,9 @@ public final class BDEIMT extends JavaPlugin {
       long var6 = Math.max(1L, this.getConfig().getLong("rappel-guide-toutes-les-minutes", 120L)) * 1200L;
       Bukkit.getScheduler().runTaskTimer(this, this.announcer::tip, var24, var24);
       Bukkit.getScheduler().runTaskTimer(this, this.announcer::guideReminder, var6, var6);
+      // Les astuces de chaque mode (skyblock, parcelles, parkour, lobby), plus souvent.
+      long modeTips = Math.max(1L, this.getConfig().getLong("astuces-par-mode-toutes-les-minutes", 5L)) * 1200L;
+      Bukkit.getScheduler().runTaskTimer(this, this.announcer::modeTip, modeTips, modeTips);
       this.votes.updateSidebar();
       this.fixServerSettings();
       new ThirdParty(this).run();

@@ -42,6 +42,30 @@ public final class SkyHub {
 
    // ----------------------------------------------------------- hologramme
 
+   /** Le grand panneau et la ligne d'astuces qui tourne en dessous. */
+   private volatile TextDisplay board;
+   private volatile TextDisplay tipLine;
+   private int tipIndex;
+   private int seconds;
+
+   private static final String TEXT = "<gradient:#7FE3FF:#4FC3FF:#B66BFF><bold>✦ SKYBLOCK ✦</bold></gradient>\n"
+      + "<#E8E8E8>Une île dans le vide, et tout à construire.</#E8E8E8>\n \n"
+      + "<#7FE3FF><bold>Démarrer</bold></#7FE3FF>\n"
+      + "<#55FF88>/ile creer</#55FF88> <gray>fabrique ta propre île (une seule par personne)</gray>\n"
+      + "<#55FF88>/ile</#55FF88> <gray>rentrer sur ton île  ·  </gray><#55FF88>/ile hub</#55FF88> <gray>revenir ici, au lobby du skyblock</gray>\n"
+      + "<#55FF88>/ile aide</#55FF88> <gray>toutes les commandes de l'île</gray>\n \n"
+      + "<#7FE3FF><bold>Jouer à plusieurs</bold></#7FE3FF>\n"
+      + "<#55FF88>/ile invite</#55FF88> <gray>‹pseudo› : ton ami vient habiter et construire chez toi</gray>\n"
+      + "<#FF5555><bold>⚠ Accepter une invitation EFFACE ta propre île, pour toujours.</bold></#FF5555>\n"
+      + "<gray>Visiter sans habiter : </gray><#55FF88>/ile tp</#55FF88> <gray>‹pseudo›  ·  </gray><#55FF88>/tpa</#55FF88> <gray>‹pseudo›</gray>\n \n"
+      + "<#FFD25E><bold>Argent et échanges</bold></#FFD25E>\n"
+      + "<gray>Les marchands d'ici achètent tes récoltes et vendent ce qui manque.</gray>\n"
+      + "<#FFD25E>/solde</#FFD25E> <gray>ton argent  ·  </gray><#FFD25E>/payer</#FFD25E> <gray>‹pseudo› ‹montant›  ·  </gray><#FFD25E>/echange</#FFD25E> <gray>‹pseudo›</gray>\n"
+      + "<#FFD25E>/marche</#FFD25E> <gray>acheter aux joueurs  ·  </gray><#FFD25E>/marche vendre</#FFD25E> <gray>‹prix› l'objet en main</gray>\n \n"
+      + "<#B66BFF>/vote</#B66BFF> <gray>‹pseudo› : une voix par jour pour l'île de quelqu'un</gray>\n \n"
+      + "<#FF5555>Tomber dans le vide = mort : ton stuff est perdu,</#FF5555>\n"
+      + "<#FF5555>et tu réapparais sur ton île.</#FF5555> <gray>Pas de combat entre joueurs.</gray>";
+
    /** Le grand panneau des regles, devant le point d'arrivee. */
    public void decorate() {
       World w = this.pl.worlds().world(Zone.SKYHUB);
@@ -68,33 +92,51 @@ public final class SkyHub {
       if (configured != null && configured.getWorld() == w) {
          at = configured;
       } else {
+         // Juste devant le point d'arrivee, a hauteur des yeux : impossible a rater.
          double yaw = Math.toRadians(spawn.getYaw());
-         at = spawn.clone().add(-Math.sin(yaw) * 8.0, 3.5, Math.cos(yaw) * 8.0);
+         at = spawn.clone().add(-Math.sin(yaw) * 6.0, 1.2, Math.cos(yaw) * 6.0);
       }
 
-      String text = "<gradient:#7FE3FF:#4FC3FF:#B66BFF><bold>✦ SKYBLOCK ✦</bold></gradient>\n"
-         + "<#E8E8E8>Une île, le vide, et tout à construire.</#E8E8E8>\n \n"
-         + "<#55FF88>/ile creer</#55FF88> <gray>ta propre île — une seule par personne</gray>\n"
-         + "<#55FF88>/ile</#55FF88> <gray>rentrer chez toi  ·  </gray><#55FF88>/ile hub</#55FF88> <gray>revenir ici</gray>\n"
-         + "<#55FF88>/ile invite</#55FF88> <gray>‹joueur›  ·  </gray><#FF5555>rejoindre un ami efface ton île</#FF5555>\n \n"
-         + "<#FFD25E>/solde</#FFD25E> <gray>ton argent  ·  </gray><#FFD25E>/payer</#FFD25E> <gray>‹joueur› ‹montant›</gray>\n"
-         + "<#FFD25E>/marche</#FFD25E> <gray>acheter aux autres  ·  </gray><#FFD25E>/marche vendre</#FFD25E> <gray>‹prix›</gray>\n"
-         + "<gray>Les marchands achètent tes récoltes et vendent ce qui manque.</gray>\n \n"
-         + "<#B66BFF>/vote</#B66BFF> <gray>‹pseudo› une voix par jour pour une île</gray>\n"
-         + "<#B66BFF>/tpa</#B66BFF> <gray>rejoindre un ami  ·  </gray><#B66BFF>/echange</#B66BFF> <gray>troquer en sécurité</gray>\n \n"
-         + "<dark_gray>Pas de combat entre joueurs. Tomber dans le vide te ramène chez toi.</dark_gray>";
+      // Sans ce ticket, le chunk se decharge des que personne n'est a cote,
+      // et le panneau (non sauvegarde) disparait avec lui : c'est pour ca
+      // qu'on ne le voyait jamais.
+      w.addPluginChunkTicket(at.getBlockX() >> 4, at.getBlockZ() >> 4, this.pl);
 
-      w.spawn(at, TextDisplay.class, d -> {
-         d.text(Msg.mm(text));
+      this.board = w.spawn(at, TextDisplay.class, d -> {
+         d.text(Msg.mm(TEXT));
          d.setBillboard(Billboard.VERTICAL);
          d.setAlignment(TextAlignment.CENTER);
-         d.setLineWidth(420);
+         d.setLineWidth(460);
          d.setShadowed(true);
-         d.setBackgroundColor(Color.fromARGB(150, 8, 12, 28));
-         d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.9F, 1.9F, 1.9F), new AxisAngle4f()));
+         d.setBackgroundColor(Color.fromARGB(160, 8, 12, 28));
+         d.setViewRange(4.0F);
+         d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.2F, 1.2F, 1.2F), new AxisAngle4f()));
          d.setPersistent(false);
          d.getPersistentDataContainer().set(this.key, PersistentDataType.BYTE, (byte)1);
       });
+
+      this.tipLine = w.spawn(at.clone().add(0.0, -0.9, 0.0), TextDisplay.class, d -> {
+         d.text(Msg.mm(this.tipText()));
+         d.setBillboard(Billboard.VERTICAL);
+         d.setAlignment(TextAlignment.CENTER);
+         d.setLineWidth(460);
+         d.setShadowed(true);
+         d.setBackgroundColor(Color.fromARGB(160, 40, 30, 4));
+         d.setViewRange(4.0F);
+         d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.0F, 1.0F, 1.0F), new AxisAngle4f()));
+         d.setPersistent(false);
+         d.getPersistentDataContainer().set(this.key, PersistentDataType.BYTE, (byte)1);
+      });
+   }
+
+   private String tipText() {
+      List<String> tips = Announcer.tipsOf("skyblock");
+
+      if (tips.isEmpty()) {
+         return " ";
+      }
+
+      return "<#FFC93C><bold>Astuce</bold></#FFC93C>\n<#F2F2F2>" + tips.get(this.tipIndex % tips.size()) + "</#F2F2F2>";
    }
 
    /** {@code /imt monde holo skyhub} : deplacer le panneau la ou l'on est. */
@@ -108,6 +150,22 @@ public final class SkyHub {
 
    /** Chaque seconde, pour ceux qui sont dans le skyblock. */
    public void tick() {
+      this.seconds++;
+
+      // Le panneau a disparu (chunk recharge, /kill...) : on le remet.
+      if (this.seconds % 10 == 0 && (this.board == null || !this.board.isValid() || this.tipLine == null || !this.tipLine.isValid())) {
+         try {
+            this.decorate();
+         } catch (Throwable t) {
+         }
+      }
+
+      // Une nouvelle astuce toutes les 8 secondes sous le panneau.
+      if (this.seconds % 8 == 0 && this.tipLine != null && this.tipLine.isValid()) {
+         this.tipIndex++;
+         this.tipLine.text(Msg.mm(this.tipText()));
+      }
+
       List<Skyblock.Island> top = this.pl.skyblock().ranking();
 
       for (Player p : Bukkit.getOnlinePlayers()) {

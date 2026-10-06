@@ -215,7 +215,7 @@ public final class Fun implements CommandExecutor, Listener {
          }
       }
 
-      Msg.broadcast(Msg.mm("<#7FB800>☠</#7FB800> ").append(this.pl.ranks().display(var1)).append(Msg.mm(" <#7FB800>se transforme en ghoule...</#7FB800>")));
+      Msg.broadcastSurvie(Msg.mm("<#7FB800>☠</#7FB800> ").append(this.pl.ranks().display(var1)).append(Msg.mm(" <#7FB800>se transforme en ghoule...</#7FB800>")));
    }
 
    public boolean traqOpen() {
@@ -226,7 +226,7 @@ public final class Fun implements CommandExecutor, Listener {
       long var1 = System.currentTimeMillis();
       if (this.traqOpenUntil > 0L && var1 >= this.traqOpenUntil) {
          this.traqOpenUntil = 0L;
-         Msg.panthereAll("<#FF5555><bold>Le Traq ferme ses portes.</bold></#FF5555> Rentrez bien, et buvez de l'eau.");
+         Msg.panthereSurvie("<#FF5555><bold>Le Traq ferme ses portes.</bold></#FF5555> Rentrez bien, et buvez de l'eau.");
       } else {
          if (!this.traqOpen() && ThreadLocalRandom.current().nextDouble() < 0.012) {
             this.openTraq();
@@ -236,15 +236,13 @@ public final class Fun implements CommandExecutor, Listener {
 
    public void openTraq() {
       this.traqOpenUntil = System.currentTimeMillis() + 3600000L;
-      Msg.panthereAll("<#FFC93C><bold>\ud83c\udf7a LE TRAQ EST OUVERT pendant 1 h !</bold></#FFC93C> Tapez <white>/traq</white> pour y foncer.");
+      Msg.panthereSurvie("<#FFC93C><bold>\ud83c\udf7a LE TRAQ EST OUVERT pendant 1 h !</bold></#FFC93C> Tapez <white>/traq</white> pour y foncer.");
 
       for (Player var2 : Bukkit.getOnlinePlayers()) {
-         if (this.pl.auth().isLogged(var2)) {
+         // Le Traq n'existe que dans la survie : on n'en parle pas ailleurs.
+         if (this.pl.auth().isLogged(var2) && this.pl.worlds().zoneOf(var2) == Zone.SURVIE) {
             Util.sound(var2, "block.note_block.bell", 1.0F, 1.4F);
-
-            if (this.pl.worlds().zoneOf(var2) == Zone.SURVIE) {
-               Msg.big(var2, "<#FFC93C><bold>LE TRAQ EST OUVERT</bold></#FFC93C>", "<gray>une heure, pas une de plus — <white>/traq</white></gray>", 5000L);
-            }
+            Msg.big(var2, "<#FFC93C><bold>LE TRAQ EST OUVERT</bold></#FFC93C>", "<gray>une heure, pas une de plus — <white>/traq</white></gray>", 5000L);
          }
       }
    }
@@ -289,7 +287,7 @@ public final class Fun implements CommandExecutor, Listener {
                )
             );
             Util.sound(var1, "entity.firework_rocket.launch", 1.0F, 0.8F);
-            Msg.broadcast(
+            Msg.broadcastSurvie(
                Msg.mm("<#FFC93C>\ud83c\udf7a</#FFC93C> ")
                   .append(this.pl.ranks().display(var1))
                   .append(Msg.mm(" <#FFD25E>file au Traq à toute vitesse !</#FFD25E>"))
@@ -311,7 +309,7 @@ public final class Fun implements CommandExecutor, Listener {
          }));
       }
 
-      Msg.broadcast(
+      Msg.broadcastSurvie(
          Msg.mm("<#FF9AC8>\ud83d\udc31</#FF9AC8> ")
             .append(this.pl.ranks().display(var1))
             .append(Msg.mm(" <#FF9AC8>a ouvert la chatterie d'Oniris !</#FF9AC8>"))
@@ -414,14 +412,14 @@ public final class Fun implements CommandExecutor, Listener {
          String var6 = (String)var3.get(var5);
          Bukkit.getScheduler().runTaskLater(this.pl, () -> {
             if (var1.isOnline()) {
-               Msg.broadcast(var4.append(Component.text(var6, NamedTextColor.WHITE)));
+               Msg.broadcastSurvie(var4.append(Component.text(var6, NamedTextColor.WHITE)));
             }
          }, 10L + var5 * 50L);
       }
 
       Bukkit.getScheduler().runTaskLater(this.pl, () -> {
          if (var1.isOnline()) {
-            Msg.poulpyAll("<gray><i>" + var1.getName() + " jure qu'il n'a jamais écrit ça.</i></gray>");
+            Msg.poulpySurvie("<gray><i>" + var1.getName() + " jure qu'il n'a jamais écrit ça.</i></gray>");
          }
       }, 10L + var3.size() * 50L);
    }

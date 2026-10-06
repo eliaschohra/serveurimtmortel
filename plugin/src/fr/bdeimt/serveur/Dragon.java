@@ -37,7 +37,7 @@ public final class Dragon {
       if (!this.pl.state().dragonWarned && var3 - var1 <= 3600000L && var3 > var1) {
          this.pl.state().dragonWarned = true;
          this.pl.state().save();
-         Msg.poulpyAll("<#C77DFF>L'Ender Dragon renaîtra dans 1 heure</#C77DFF> dans l'End. Préparez vos arcs !");
+         Msg.poulpySurvie("<#C77DFF>L'Ender Dragon renaîtra dans 1 heure</#C77DFF> dans l'End. Préparez vos arcs !");
       }
 
       if (var1 >= var3) {
@@ -89,8 +89,8 @@ public final class Dragon {
                   }
 
                   if (var16) {
-                     Msg.poulpyAll("<#C77DFF><bold>L'Ender Dragon renaît dans l'End !</bold></#C77DFF> Rassemblez-vous, et que le meilleur gagne.");
-                     Util.soundAll("entity.ender_dragon.growl", 0.6F, 0.9F);
+                     Msg.poulpySurvie("<#C77DFF><bold>L'Ender Dragon renaît dans l'End !</bold></#C77DFF> Rassemblez-vous, et que le meilleur gagne.");
+                     Util.soundSurvie("entity.ender_dragon.growl", 0.6F, 0.9F);
                      return "Respawn lancé.";
                   } else {
                      for (EnderCrystal var18 : var6) {
@@ -103,7 +103,7 @@ public final class Dragon {
             } else if (var1) {
                return "Le dragon est déjà vivant.";
             } else {
-               Msg.poulpyAll("<#C77DFF>L'Ender Dragon règne toujours sur l'End</#C77DFF>... Qui osera l'affronter ?");
+               Msg.poulpySurvie("<#C77DFF>L'Ender Dragon règne toujours sur l'End</#C77DFF>... Qui osera l'affronter ?");
                return "Déjà vivant.";
             }
          }

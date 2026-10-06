@@ -346,6 +346,16 @@ public final class Util {
       }
    }
 
+   public static void soundSurvie(String var0, float var1, float var2) {
+      BDEIMT pl = BDEIMT.get();
+
+      for (Player var4 : Bukkit.getOnlinePlayers()) {
+         if (pl.worlds().zoneOf(var4) == Zone.SURVIE) {
+            sound(var4, var0, var1, var2);
+         }
+      }
+   }
+
    public static String pct(double var0) {
       double var2 = var0 * 100.0;
       String var4;

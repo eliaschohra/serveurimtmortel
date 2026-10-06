@@ -124,8 +124,14 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    }
 
    private Location arrival(Player p) {
-      Skyblock.Island mine = this.islandOf(p.getUniqueId());
+      Skyblock.Island mine = this.homeIslandOf(p.getUniqueId());
       return mine == null ? null : this.home(mine);
+   }
+
+   /** L'ile ou l'on habite : la sienne, ou celle de l'ami qui nous heberge. */
+   public Skyblock.Island homeIslandOf(UUID uuid) {
+      Skyblock.Island mine = this.islandOf(uuid);
+      return mine != null ? mine : this.guestOf(uuid);
    }
 
    public Location home(Skyblock.Island island) {
@@ -136,14 +142,66 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       }
 
       this.model();
-      return new Location(
+      Location wanted = new Location(
          w,
          island.x * SPACING + this.homeOffset[0] + 0.5,
          bedrockY() + this.homeOffset[1],
          island.z * SPACING + this.homeOffset[2] + 0.5,
-         0.0F,
+         this.homeYaw,
          0.0F
       );
+      return this.safe(wanted, island);
+   }
+
+   /**
+    * Un point d'arrivee ou l'on tient debout.
+    *
+    * <p>Le joueur a pu creuser sous son point d'arrivee, ou construire
+    * dessus ; et les iles faites avant la nouvelle ile n'ont pas la meme
+    * forme. On cherche donc, autour du point prevu, la premiere colonne avec
+    * un sol sous les pieds et de l'air pour la tete. Si l'ile a entierement
+    * disparu, on repose un bloc de terre pour ne pas tomber dans le vide.
+    */
+   private Location safe(Location wanted, Skyblock.Island island) {
+      if (standable(wanted)) {
+         return wanted;
+      }
+
+      World w = wanted.getWorld();
+      int cx = wanted.getBlockX();
+      int cz = wanted.getBlockZ();
+
+      for (int r = 0; r <= 8; r++) {
+         for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+               if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                  continue;
+               }
+
+               Block top = w.getHighestBlockAt(cx + dx, cz + dz);
+
+               if (top.getType().isSolid() && top.getY() > w.getMinHeight()) {
+                  Location at = top.getLocation().add(0.5, 1.0, 0.5);
+                  at.setYaw(wanted.getYaw());
+
+                  if (standable(at)) {
+                     return at;
+                  }
+               }
+            }
+         }
+      }
+
+      Block floor = wanted.getBlock().getRelative(org.bukkit.block.BlockFace.DOWN);
+      floor.setType(Material.DIRT, false);
+      return wanted;
+   }
+
+   private static boolean standable(Location at) {
+      Block feet = at.getBlock();
+      Block head = feet.getRelative(org.bukkit.block.BlockFace.UP);
+      Block below = feet.getRelative(org.bukkit.block.BlockFace.DOWN);
+      return feet.isPassable() && !feet.isLiquid() && head.isPassable() && !head.isLiquid() && below.getType().isSolid();
    }
 
    /** L'ile qui contient ce point, ou null si on est entre deux iles. */
@@ -304,7 +362,8 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    /** Le modele de l'ile, lu une fois dans ile-classique.txt. */
    private List<String> model;
    /** Ou l'on arrive sur l'ile, par rapport a son bloc de bedrock. */
-   private int[] homeOffset = new int[]{0, 5, 2};
+   private int[] homeOffset = new int[]{0, 3, 0};
+   private float homeYaw = 0.0F;
 
    private List<String> model() {
       if (this.model != null) {
@@ -324,6 +383,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
                   if (line.startsWith("maison ")) {
                      String[] p = line.split(" ");
                      this.homeOffset = new int[]{Integer.parseInt(p[1]), Integer.parseInt(p[2]), Integer.parseInt(p[3])};
+                     this.homeYaw = p.length > 4 ? Float.parseFloat(p[4]) : 0.0F;
                   }
                }
             }
@@ -336,15 +396,14 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       return lines;
    }
 
-   /** La hauteur du bloc de bedrock : l'herbe arrive ainsi a ISLAND_Y. */
+   /** La hauteur du bloc de bedrock : l'herbe de l'ile arrive ainsi a ISLAND_Y. */
    private static int bedrockY() {
-      return ISLAND_Y - 4;
+      return ISLAND_Y - 2;
    }
 
    /**
-    * Pose l'ile de depart classique : herbe, terre, pierre et sable en
-    * dessous, bedrock au fond, un chene, une torche, le coffre du Skyblock
-    * originel et une vache.
+    * Pose l'ile de depart : le grand L de terre et d'herbe du Skyblock
+    * originel, son chene, son coffre, le bloc de bedrock et une vache.
     */
    private void build(Skyblock.Island island) {
       World w = this.pl.worlds().world(Zone.SKYBLOCK);
@@ -420,37 +479,149 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
 
    // ------------------------------------------------------------- evenements
 
+   /** Ceux qui viennent de tomber dans le vide, pour le leur dire au retour. */
+   private final Set<UUID> fellInVoid = ConcurrentHashMap.newKeySet();
+
+   /**
+    * Mort sur une ile : on reapparait sur son ile (ou celle de l'ami qui nous
+    * heberge), jamais au hub ni au lobby du skyblock. Un lit pose sur son ile
+    * reste respecte, comme dans le jeu normal.
+    */
    @EventHandler(priority = EventPriority.HIGH)
    public void onRespawn(PlayerRespawnEvent e) {
       Player p = e.getPlayer();
-      if (this.pl.worlds().zoneOf(p) != Zone.SKYBLOCK && this.pl.worlds().zoneOf(p) != Zone.SKYHUB) {
+      Zone zone = this.pl.worlds().zoneOf(p);
+      if (zone != Zone.SKYBLOCK && zone != Zone.SKYHUB) {
          return;
       }
 
-      Skyblock.Island mine = this.islandOf(p.getUniqueId());
-      Location home = mine == null ? this.pl.worlds().spawnOf(Zone.SKYHUB, p) : this.home(mine);
+      boolean bed = (e.isBedSpawn() || e.isAnchorSpawn())
+         && e.getRespawnLocation().getWorld() != null
+         && this.pl.worlds().zoneOf(e.getRespawnLocation().getWorld()) == Zone.SKYBLOCK;
 
-      if (home != null) {
-         e.setRespawnLocation(home);
+      if (!bed) {
+         Skyblock.Island mine = this.homeIslandOf(p.getUniqueId());
+         Location home = mine == null ? this.pl.worlds().spawnOf(Zone.SKYHUB, p) : this.home(mine);
+
+         if (home != null) {
+            e.setRespawnLocation(home);
+         }
+      }
+
+      if (this.fellInVoid.remove(p.getUniqueId())) {
+         Bukkit.getScheduler().runTaskLater(this.pl, () -> {
+            if (p.isOnline()) {
+               Msg.big(p, "<#FF5555><bold>Tombé dans le vide</bold></#FF5555>", "<gray>ton stuff est perdu — te revoilà sur ton île</gray>", 3500L);
+               Msg.info(p, "<gray>Astuce : pose des blocs autour du bord de ton île pour ne pas tomber.</gray>");
+            }
+         }, 5L);
       }
    }
 
-   /** Tomber dans le vide ramene chez soi plutot que de tuer. */
+   /**
+    * Tomber de son ile tue, comme dans le skyblock classique : le stuff tombe
+    * avec soi dans le vide et il est perdu. Pas de tombe ici. On n'attend pas
+    * que le jeu le fasse (bien plus bas, apres de longues secondes de chute).
+    */
    @EventHandler(ignoreCancelled = true)
    public void onMove(PlayerMoveEvent e) {
       Player p = e.getPlayer();
-      if (this.pl.worlds().zoneOf(p) != Zone.SKYBLOCK || e.getTo().getY() > 0.0) {
+      if (e.getTo().getY() > ISLAND_Y - 40 || this.pl.worlds().zoneOf(p) != Zone.SKYBLOCK || p.isDead()) {
          return;
       }
 
-      Skyblock.Island mine = this.islandOf(p.getUniqueId());
-      Location home = mine == null ? this.pl.worlds().spawnOf(Zone.SKYHUB, p) : this.home(mine);
-
-      if (home != null) {
-         p.setFallDistance(0.0F);
-         p.teleport(home);
-         Msg.err(p, "Tu es tombé dans le vide. Te revoilà chez toi.");
+      if (p.getGameMode() == org.bukkit.GameMode.CREATIVE || p.getGameMode() == org.bukkit.GameMode.SPECTATOR) {
+         return;
       }
+
+      // Quarante blocs sous l'ile, et en pleine chute : quelqu'un qui construit
+      // vers le bas, les pieds sur ses blocs, n'est pas « tombe ».
+      if (p.getFallDistance() < 6.0F) {
+         return;
+      }
+
+      this.fellInVoid.add(p.getUniqueId());
+
+      try {
+         p.damage(
+            10000.0,
+            org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.OUT_OF_WORLD).build()
+         );
+      } catch (Throwable t) {
+         p.setHealth(0.0);
+      }
+
+      if (!p.isDead()) {
+         // Un totem d'immortalite l'a sauve... mais pas du vide.
+         p.setHealth(0.0);
+      }
+   }
+
+   // --------------------------------------------------------------- bordure
+
+   /** La case de grille dont chaque joueur voit la bordure. */
+   private final Map<UUID, String> borderCell = new ConcurrentHashMap<>();
+
+   /**
+    * Chacun ne voit que la bordure de l'ile ou il se trouve : un mur de
+    * {@value #RADIUS} blocs autour du centre, infranchissable. Personne ne
+    * peut donc partir a pied (ou en pont) jusque chez les autres ; pour
+    * visiter, il faut {@code /ile tp ‹pseudo›} ou {@code /tpa}.
+    */
+   public void updateBorder(Player p) {
+      if (!p.isOnline()) {
+         return;
+      }
+
+      if (this.pl.worlds().zoneOf(p) != Zone.SKYBLOCK) {
+         if (this.borderCell.remove(p.getUniqueId()) != null) {
+            try {
+               p.setWorldBorder(null);
+            } catch (Throwable t) {
+            }
+         }
+
+         return;
+      }
+
+      Location l = p.getLocation();
+      int gx = Math.floorDiv(l.getBlockX() + SPACING / 2, SPACING);
+      int gz = Math.floorDiv(l.getBlockZ() + SPACING / 2, SPACING);
+      String cell = gx + "," + gz;
+
+      if (cell.equals(this.borderCell.get(p.getUniqueId()))) {
+         return;
+      }
+
+      try {
+         org.bukkit.WorldBorder border = Bukkit.createWorldBorder();
+         border.setCenter(gx * SPACING + 0.5, gz * SPACING + 0.5);
+         border.setSize(RADIUS * 2.0 + 1.0);
+         border.setWarningDistance(3);
+         border.setDamageAmount(0.0);
+         p.setWorldBorder(border);
+         this.borderCell.put(p.getUniqueId(), cell);
+      } catch (Throwable t) {
+      }
+   }
+
+   /** Chaque seconde : la bordure suit le joueur d'une ile a l'autre. */
+   public void tick() {
+      for (Player p : Bukkit.getOnlinePlayers()) {
+         this.updateBorder(p);
+      }
+   }
+
+   @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+   public void onTeleport(org.bukkit.event.player.PlayerTeleportEvent e) {
+      Player p = e.getPlayer();
+      Bukkit.getScheduler().runTask(this.pl, () -> this.updateBorder(p));
+   }
+
+   @EventHandler
+   public void onQuit(org.bukkit.event.player.PlayerQuitEvent e) {
+      this.borderCell.remove(e.getPlayer().getUniqueId());
+      this.fellInVoid.remove(e.getPlayer().getUniqueId());
    }
 
    // --------------------------------------------------------------- commande
@@ -479,6 +650,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
          case "supprimer", "delete", "reset" -> this.delete(p, args);
          case "hub", "spawn" -> this.pl.worlds().send(p, Zone.SKYHUB);
          case "info" -> this.info(p);
+         case "aide", "help", "?" -> this.help(p);
          default -> this.help(p);
       }
 
@@ -493,7 +665,11 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       Msg.raw(p, " <#55FF88>/ile invite</#55FF88> <gray>‹joueur›</gray> <dark_gray>— l'inviter a te rejoindre</dark_gray>");
       Msg.raw(p, " <#55FF88>/ile accept</#55FF88> <dark_gray>— accepter une invitation</dark_gray>");
       Msg.raw(p, " <#55FF88>/ile quitter</#55FF88> <dark_gray>— repartir de l'île d'un ami</dark_gray>");
-      Msg.raw(p, " <#55FF88>/ile hub</#55FF88> <dark_gray>— la place centrale : fermes, mine, marché</dark_gray>");
+      Msg.raw(p, " <#55FF88>/ile hub</#55FF88> <dark_gray>— le lobby du skyblock : marchands, marché</dark_gray>");
+      Msg.raw(p, " <#55FF88>/ile retirer</#55FF88> <gray>‹joueur›</gray> <dark_gray>— retirer quelqu'un de ton île</dark_gray>");
+      Msg.raw(p, " <#55FF88>/ile info</#55FF88> <dark_gray>— ton île, tes invités</dark_gray>");
+      Msg.raw(p, "<#FF5555> ⚠ Rejoindre l'île d'un ami efface la tienne, pour toujours.</#FF5555>");
+      Msg.raw(p, "<#FF5555> ⚠ Tomber dans le vide = mort : ton stuff est perdu.</#FF5555>");
       Msg.raw(p, " <#55FF88>/ile supprimer confirmer</#55FF88> <dark_gray>— repartir de zéro</dark_gray>");
    }
 
@@ -557,10 +733,11 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
             return;
          }
       } else {
-         target = this.islandOf(p.getUniqueId());
+         target = this.homeIslandOf(p.getUniqueId());
 
          if (target == null) {
             Msg.err(p, "Tu n'as pas encore d'île. <white>/ile creer</white>");
+            Msg.info(p, "<gray>Le lobby du skyblock (marchands, marché) : <white>/ile hub</white>.</gray>");
             return;
          }
       }
@@ -925,7 +1102,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       List<String> out = new ArrayList<>();
 
       if (args.length == 1) {
-         out.addAll(List.of("creer", "tp", "invite", "accept", "refuse", "quitter", "retirer", "hub", "info", "supprimer"));
+         out.addAll(List.of("creer", "tp", "invite", "accept", "refuse", "quitter", "retirer", "hub", "info", "supprimer", "aide"));
          String start = args[0].toLowerCase(Locale.ROOT);
          out.removeIf(s -> !s.startsWith(start));
       } else if (args.length == 2) {
