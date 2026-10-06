@@ -50,6 +50,7 @@ public final class BDEIMT extends JavaPlugin {
    private Parkour parkour;
    private Plots plots;
    private Skyblock skyblock;
+   private Skins skins;
    private SkyHub skyhub;
 
    public static BDEIMT get() {
@@ -152,6 +153,10 @@ public final class BDEIMT extends JavaPlugin {
       return this.skyblock;
    }
 
+   public Skins skins() {
+      return this.skins;
+   }
+
    public SkyHub skyhub() {
       return this.skyhub;
    }
@@ -192,6 +197,7 @@ public final class BDEIMT extends JavaPlugin {
       this.lists = new Lists(this);
       this.lists.load();
       this.npcs = new Npcs(this);
+      this.skins = new Skins(this);
       this.parkour = new Parkour(this);
       this.parkour.load();
       this.plots = new Plots(this);
@@ -226,6 +232,7 @@ public final class BDEIMT extends JavaPlugin {
       });
       this.hub.decorate();
       this.npcs.spawnAll();
+      this.skins.syncAll();
       this.parkour.refreshHologram();
       this.plots.init();
       this.skyblock.init();

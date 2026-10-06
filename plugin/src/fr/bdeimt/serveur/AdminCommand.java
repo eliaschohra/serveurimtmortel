@@ -350,13 +350,19 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
       if (args[1].equalsIgnoreCase("skin")) {
          if (args.length < 4) {
-            Msg.err(sender, "/imt pnj skin ‹zaza|mobutu› ‹pseudo d'un compte Minecraft›");
+            Msg.err(sender, "/imt pnj skin ‹zaza|mobutu› ‹pseudo›   —   ou   /imt pnj skin ‹zaza|mobutu› fichier");
             return;
          }
 
          String id = args[2].toLowerCase(Locale.ROOT);
          if (!id.equals("zaza") && !id.equals("mobutu")) {
             Msg.err(sender, "Il n'y a que zaza et mobutu.");
+            return;
+         }
+
+         // « fichier » : on prend le PNG depose dans plugins/BDEIMT/skins/.
+         if (args[3].equalsIgnoreCase("fichier") || args[3].equalsIgnoreCase("png")) {
+            this.pl.skins().upload(id, sender);
             return;
          }
 

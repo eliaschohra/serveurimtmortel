@@ -48,18 +48,35 @@ portails: []
 # ============================================================
 # Zaza se frappe et revient. Le Mobutu a la vie d'un Warden et rend
 # cinq fois les degats recus.
-# Pour leur donner un skin, le plus simple en jeu :
-#     /imt pnj skin zaza <pseudo d'un compte Minecraft>
-# Sinon, colle ici la valeur "textures" d'un skin (base64).
-# Pour les placer :  se mettre au bon endroit puis  /imt pnj zaza ici
+# Trois facons de leur donner un skin :
+#
+#  1. Depuis un fichier PNG (le plus simple) : depose ton image dans
+#     plugins/BDEIMT/skins/ en l'appelant zaza.png ou mobutu.png, puis
+#     redemarre, ou tape en jeu :  /imt pnj skin zaza fichier
+#     Le skin doit faire 64 x 64 pixels.
+#
+#  2. En copiant le skin d'un compte Minecraft existant :
+#     /imt pnj skin zaza <pseudo>
+#
+#  3. A la main : va sur mineskin.org, envoie ton PNG, et colle les deux
+#     chaines "value" et "signature" ci-dessous dans texture et signature.
+#
+# Pour les placer : se mettre au bon endroit puis  /imt pnj zaza
 pnj:
   zaza:
     pseudo: ""
     texture: ""
     signature: ""
     position: ""
+    # classic = bras larges (Steve), slim = bras fins (Alex)
+    modele: "classic"
   mobutu:
     pseudo: ""
     texture: ""
     signature: ""
     position: ""
+    modele: "classic"
+
+# Facultatif : une cle d'API MineSkin (mineskin.org) si l'envoi automatique
+# des PNG est refuse pour cause de trop grand nombre de demandes.
+mineskin-cle: ""
