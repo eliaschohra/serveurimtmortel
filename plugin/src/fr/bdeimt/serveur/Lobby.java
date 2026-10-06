@@ -331,10 +331,13 @@ public final class Lobby implements Listener {
             int var6 = 3;
             double var7 = Double.MAX_VALUE;
 
-            for (int var9 = 1; var9 <= 8; var9++) {
-               for (int var10 = 1; var10 <= 5; var10++) {
+            // On vise le plus grand mur possible : l'image du lobby doit se voir
+            // de loin. On cherche la grille de cartes dont les proportions
+            // collent a l'image, en favorisant nettement la surface.
+            for (int var9 = 1; var9 <= 12; var9++) {
+               for (int var10 = 1; var10 <= 8; var10++) {
                   double var11 = Math.abs(Math.log((double)var9 / var10 / var3));
-                  double var13 = var11 * 3.0 - var9 * var10 * 0.03;
+                  double var13 = var11 * 3.0 - var9 * var10 * 0.06;
                   if (var13 < var7) {
                      var7 = var13;
                      var5 = var9;

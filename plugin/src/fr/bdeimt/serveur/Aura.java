@@ -96,7 +96,7 @@ public final class Aura implements Listener, CommandExecutor {
    )
    public void onHit(EntityDamageByEntityEvent var1) {
       Player var2 = this.attacker(var1);
-      if (var2 != null && this.pl.auth().isLogged(var2)) {
+      if (var2 != null && this.pl.auth().isLogged(var2) && this.pl.worlds().zoneOf(var2) == Zone.SURVIE) {
          if (!var1.isCritical()) {
             Aura.Combo var11 = this.combos.get(var2.getUniqueId());
             if (var11 != null && var11.size >= 3) {

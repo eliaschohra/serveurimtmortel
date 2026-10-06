@@ -19,3 +19,44 @@ rappel-guide-toutes-les-minutes: 120
 
 # Reapparition de l'Ender Dragon (en heures)
 dragon-toutes-les-heures: 48
+
+# ============================================================
+#  Les univers
+# ============================================================
+# Point d'arrivee de chaque monde. Le plus simple est de se placer
+# au bon endroit en jeu et de taper :  /imt monde spawn hub
+# (zones : hub, parkour, skyhub, skyblock, parcelles)
+mondes:
+  hub:
+    spawn: ""
+  parkour:
+    spawn: ""
+  parcelles:
+    spawn: ""
+  skyhub:
+    spawn: ""
+
+# Portails physiques : on marche dedans, on change de monde.
+# A poser en jeu avec :  /imt portail parkour 2
+portails: []
+
+# ============================================================
+#  Les PNJ du hub
+# ============================================================
+# Zaza se frappe et revient. Le Mobutu a la vie d'un Warden et rend
+# cinq fois les degats recus.
+# Pour leur donner un skin, le plus simple en jeu :
+#     /imt pnj skin zaza <pseudo d'un compte Minecraft>
+# Sinon, colle ici la valeur "textures" d'un skin (base64).
+# Pour les placer :  se mettre au bon endroit puis  /imt pnj zaza ici
+pnj:
+  zaza:
+    pseudo: ""
+    texture: ""
+    signature: ""
+    position: ""
+  mobutu:
+    pseudo: ""
+    texture: ""
+    signature: ""
+    position: ""

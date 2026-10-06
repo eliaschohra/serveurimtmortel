@@ -336,9 +336,14 @@ public final class Teleports implements CommandExecutor, TabCompleter, Listener 
    }
 
    private void spawn(Player var1) {
-      if (!this.pl.lobby().isLobby(var1.getWorld()) || this.pl.auth().isLogged(var1)) {
-         this.warmup(var1, this.pl::survivalSpawn, "au spawn");
+      if (this.pl.lobby().isLobby(var1.getWorld()) && !this.pl.auth().isLogged(var1)) {
+         return;
       }
+
+      // Chaque univers a son point de depart : /spawn ramene a celui du monde
+      // ou l'on se trouve, pas a celui de la survie.
+      Zone var2 = this.pl.worlds().zoneOf(var1);
+      this.warmup(var1, () -> this.pl.worlds().spawnOf(var2, var1), "au spawn de " + var2.shortLabel().toLowerCase(Locale.ROOT));
    }
 
    private void warmup(Player var1, Teleports.Dest var2, String var3) {

@@ -179,9 +179,14 @@ public final class Ranks implements Listener {
 
             this.lastChat.put(var2.getUniqueId(), var4);
             this.lastMessage.put(var2.getUniqueId(), var6);
+            // Chaque univers a son chat : on ne lit que les messages des gens
+            // qui sont dans le meme groupe de mondes que soi.
+            String var11 = this.pl.worlds().zoneOf(var2).group;
             var1.viewers().removeIf(var2x -> {
                if (var2x instanceof Player var3x) {
                   if (!this.pl.auth().isLogged(var3x)) {
+                     return true;
+                  } else if (!this.pl.worlds().zoneOf(var3x).group.equals(var11)) {
                      return true;
                   } else {
                      PlayerData var4x = this.pl.data().get(var3x.getUniqueId());
@@ -191,7 +196,7 @@ public final class Ranks implements Listener {
                   return false;
                }
             });
-            Component var10 = Msg.mm(this.prefix(var2));
+            Component var10 = Msg.mm(this.prefix(var2) + this.pl.lists().tabSuffix(var2));
             var1.renderer(
                ChatRenderer.viewerUnaware(
                   (var1x, var2x, var3x) -> var10.append(Component.space())

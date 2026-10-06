@@ -41,6 +41,12 @@ public final class BDEIMT extends JavaPlugin {
    private Panel panel;
    private Fun fun;
    private Maintenance maintenance;
+   private Worlds worlds;
+   private Inventories inventories;
+   private Hub hub;
+   private Tab tab;
+   private Lists lists;
+   private Npcs npcs;
 
    public static BDEIMT get() {
       return instance;
@@ -106,6 +112,30 @@ public final class BDEIMT extends JavaPlugin {
       return this.maintenance;
    }
 
+   public Worlds worlds() {
+      return this.worlds;
+   }
+
+   public Inventories inventories() {
+      return this.inventories;
+   }
+
+   public Hub hub() {
+      return this.hub;
+   }
+
+   public Tab tab() {
+      return this.tab;
+   }
+
+   public Lists lists() {
+      return this.lists;
+   }
+
+   public Npcs npcs() {
+      return this.npcs;
+   }
+
    public String adminName() {
       return this.getConfig().getString("admin", "curlybrownhair");
    }
@@ -133,6 +163,15 @@ public final class BDEIMT extends JavaPlugin {
       this.auth.prepareAdminCode();
       this.lobby = new Lobby(this);
       this.lobby.init();
+      this.inventories = new Inventories(this);
+      this.worlds = new Worlds(this);
+      this.worlds.init();
+      this.hub = new Hub(this);
+      this.hub.loadPortals();
+      this.tab = new Tab(this);
+      this.lists = new Lists(this);
+      this.lists.load();
+      this.npcs = new Npcs(this);
       this.fly = new Fly(this);
       this.votes = new Votes(this);
       this.kits = new Kits(this);
@@ -155,6 +194,13 @@ public final class BDEIMT extends JavaPlugin {
       this.fun = new Fun(this);
       this.fun.init();
       this.maintenance = new Maintenance(this);
+      this.worlds.registerSpawn(Zone.SURVIE, player -> {
+         PlayerData data = this.data.get(player);
+         Location back = Util.loc(data.returnLoc);
+         return back != null && this.worlds.zoneOf(back.getWorld()) == Zone.SURVIE ? back : this.survivalSpawn();
+      });
+      this.hub.decorate();
+      this.npcs.spawnAll();
 
       for (Listener var5 : new Listener[]{
          this.auth,
@@ -173,6 +219,10 @@ public final class BDEIMT extends JavaPlugin {
          this.panel,
          this.fun,
          this.maintenance,
+         this.worlds,
+         this.hub,
+         this.lists,
+         this.npcs,
          new FunItems(),
          new Menu.Listen()
       }) {
@@ -197,6 +247,8 @@ public final class BDEIMT extends JavaPlugin {
       }
 
       this.cmd("listes", this.kits, null);
+      this.cmd("liste", this.lists, this.lists);
+      this.cmd("hub", this.hub, null);
 
       for (String var26 : new String[]{"tpa", "tpahere", "tpaccept", "tpdeny", "tpcancel", "tpatoggle", "sethome", "home", "delhome", "homes", "spawn"}) {
          this.cmd(var26, this.teleports, this.teleports);
@@ -221,6 +273,7 @@ public final class BDEIMT extends JavaPlugin {
          this.auth.tick();
          this.fly.tick();
          this.graves.tick();
+         this.tab.tick();
       }, 20L, 20L);
       Bukkit.getScheduler().runTaskTimer(this, () -> {
          this.dragon.check();
@@ -242,6 +295,27 @@ public final class BDEIMT extends JavaPlugin {
    }
 
    public void onDisable() {
+      try {
+         if (this.npcs != null) {
+            this.npcs.clearAll();
+         }
+      } catch (Throwable t) {
+      }
+
+      try {
+         if (this.inventories != null) {
+            this.inventories.saveAll();
+         }
+      } catch (Throwable t) {
+      }
+
+      try {
+         if (this.lists != null) {
+            this.lists.save();
+         }
+      } catch (Throwable t) {
+      }
+
       try {
          if (this.trade != null) {
             this.trade.cancelAll();

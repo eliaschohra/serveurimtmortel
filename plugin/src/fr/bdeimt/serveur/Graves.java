@@ -165,7 +165,7 @@ public final class Graves implements Listener, CommandExecutor {
    )
    public void onDeath(PlayerDeathEvent var1) {
       Player var2 = var1.getEntity();
-      if (!var1.getKeepInventory() && !this.pl.lobby().isLobby(var2.getWorld())) {
+      if (!var1.getKeepInventory() && this.pl.worlds().zoneOf(var2) == Zone.SURVIE) {
          List<ItemStack> var3 = Util.copy(var1.getDrops());
          int var4 = var1.getDroppedExp();
          if (!var3.isEmpty() || var4 > 0) {

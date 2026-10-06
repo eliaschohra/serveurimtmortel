@@ -429,21 +429,32 @@ public final class Auth implements Listener, CommandExecutor {
       this.joinedAt.remove(var1.getUniqueId());
       this.fails.remove(var1.getUniqueId());
       PlayerData var3 = this.pl.data().get(var1);
-      Location var4 = Util.loc(var3.returnLoc);
-      if (var4 == null || this.pl.lobby().isLobby(var4.getWorld())) {
-         var4 = this.pl.survivalSpawn();
-      }
-
-      GameMode var5 = GameMode.SURVIVAL;
-      if (var3.savedGameMode != null) {
-         try {
-            var5 = GameMode.valueOf(var3.savedGameMode);
-         } catch (IllegalArgumentException var8) {
+      // Une fois identifie, on arrive dans le hub : c'est la qu'on choisit son
+      // mode de jeu. Si le monde du hub n'a pas ete depose sur le serveur, on
+      // repart directement en survie comme avant.
+      boolean hub = this.pl.worlds().available(Zone.HUB);
+      Location var4;
+      GameMode var5;
+      if (hub) {
+         var4 = this.pl.worlds().spawnOf(Zone.HUB, var1);
+         var5 = Zone.HUB.mode;
+      } else {
+         var4 = Util.loc(var3.returnLoc);
+         if (var4 == null || this.pl.lobby().isLobby(var4.getWorld())) {
+            var4 = this.pl.survivalSpawn();
          }
-      }
 
-      if (var5 == GameMode.ADVENTURE) {
          var5 = GameMode.SURVIVAL;
+         if (var3.savedGameMode != null) {
+            try {
+               var5 = GameMode.valueOf(var3.savedGameMode);
+            } catch (IllegalArgumentException var8) {
+            }
+         }
+
+         if (var5 == GameMode.ADVENTURE) {
+            var5 = GameMode.SURVIVAL;
+         }
       }
 
       for (Player var7 : Bukkit.getOnlinePlayers()) {
@@ -457,9 +468,20 @@ public final class Auth implements Listener, CommandExecutor {
       GameMode var9 = var5;
       this.pl.lobby().leave(var1, var4, () -> {
          var1.setGameMode(var9);
-         this.pl.fly().onLogin(var1);
-         this.pl.graves().onLogin(var1);
-         this.pl.votes().onLogin(var1);
+
+         if (hub) {
+            // Le stuff de la survie est range avant d'entrer dans le hub.
+            this.pl.inventories().setCurrentGroup(var1, Zone.SURVIE.group);
+            this.pl.inventories().switchTo(var1, Zone.HUB.group);
+            this.pl.worlds().arrive(var1, Zone.HUB);
+         } else {
+            this.pl.inventories().setCurrentGroup(var1, Zone.SURVIE.group);
+            this.pl.fly().onLogin(var1);
+            this.pl.graves().onLogin(var1);
+            this.pl.votes().onLogin(var1);
+         }
+
+         this.pl.tab().refresh(var1);
       });
       Msg.broadcast(Msg.mm("<#55FF88>+</#55FF88> ").append(this.pl.ranks().display(var1)));
       var1.showTitle(

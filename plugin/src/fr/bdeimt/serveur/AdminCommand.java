@@ -39,6 +39,17 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "modo":
                this.modo(var1, var4);
                break;
+            case "monde":
+            case "mondes":
+               this.monde(var1, var4);
+               break;
+            case "portail":
+            case "portails":
+               this.portail(var1, var4);
+               break;
+            case "pnj":
+               this.pnj(var1, var4);
+               break;
             case "resetmdp":
                if (var4.length < 2) {
                   Msg.err(var1, "/imt resetmdp ‹pseudo›");
@@ -253,13 +264,150 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       }
    }
 
+   /** {@code /imt monde} : la liste des univers, et reglage du point d'arrivee. */
+   private void monde(CommandSender sender, String[] args) {
+      if (args.length < 2) {
+         Msg.raw(sender, "<dark_gray>———— <#4FC3FF>Les univers</#4FC3FF> ————</dark_gray>");
+
+         for (Zone zone : Zone.values()) {
+            boolean open = this.pl.worlds().available(zone);
+            Msg.raw(
+               sender,
+               " " + (open ? "<#55FF88>●</#55FF88>" : "<#FF5555>●</#FF5555>") + " " + zone.color + zone.shortLabel()
+                  + "</" + zone.color.substring(1, zone.color.length() - 1) + "> <dark_gray>(" + (zone.world == null ? "monde principal" : zone.world)
+                  + ")</dark_gray> <gray>" + (open ? this.pl.worlds().count(zone) + " joueur(s)" : "monde absent") + "</gray>"
+            );
+         }
+
+         Msg.info(sender, "<white>/imt monde spawn ‹zone›</white> pour fixer le point d'arrivee la ou tu es.");
+         return;
+      }
+
+      if (!args[1].equalsIgnoreCase("spawn") || args.length < 3) {
+         Msg.err(sender, "/imt monde spawn ‹zone›");
+         return;
+      }
+
+      if (Msg.noConsole(sender)) {
+         return;
+      }
+
+      Zone zone = parseZone(args[2]);
+      if (zone == null) {
+         Msg.err(sender, "Zone inconnue. Essaie : hub, parkour, skyhub, skyblock, parcelles, survie.");
+         return;
+      }
+
+      Player p = (Player)sender;
+      this.pl.worlds().setSpawn(zone, p.getLocation());
+      Msg.ok(sender, "Point d'arrivee de " + zone.color + zone.shortLabel() + "</gray> fixe ici <gray>(" + Util.coords(p.getLocation()) + ")</gray>.");
+   }
+
+   /** {@code /imt portail} : poser un passage physique vers un mode de jeu. */
+   private void portail(CommandSender sender, String[] args) {
+      if (Msg.noConsole(sender)) {
+         return;
+      }
+
+      Player p = (Player)sender;
+      if (args.length >= 2 && args[1].equalsIgnoreCase("effacer")) {
+         int removed = this.pl.hub().clearPortals(p.getWorld());
+         Msg.ok(sender, removed + " portail(s) retire(s) de ce monde.");
+         return;
+      }
+
+      if (args.length < 2) {
+         Msg.err(sender, "/imt portail ‹zone› [rayon]  —  ou  /imt portail effacer");
+         return;
+      }
+
+      Zone zone = parseZone(args[1]);
+      if (zone == null) {
+         Msg.err(sender, "Zone inconnue.");
+         return;
+      }
+
+      double radius = 2.0;
+      if (args.length >= 3) {
+         try {
+            radius = Math.max(1.0, Math.min(8.0, Double.parseDouble(args[2])));
+         } catch (NumberFormatException ex) {
+            Msg.err(sender, "Rayon invalide.");
+            return;
+         }
+      }
+
+      this.pl.hub().addPortal(zone, p.getLocation(), radius);
+      Msg.ok(sender, "Portail vers " + zone.color + zone.shortLabel() + "</gray> pose ici, rayon <white>" + radius + "</white>.");
+   }
+
+   /** {@code /imt pnj} : poser Zaza et le Mobutu, et leur donner un skin. */
+   private void pnj(CommandSender sender, String[] args) {
+      if (args.length < 2) {
+         Msg.err(sender, "/imt pnj ‹zaza|mobutu› ici   —   /imt pnj skin ‹zaza|mobutu› ‹pseudo›");
+         return;
+      }
+
+      if (args[1].equalsIgnoreCase("skin")) {
+         if (args.length < 4) {
+            Msg.err(sender, "/imt pnj skin ‹zaza|mobutu› ‹pseudo d'un compte Minecraft›");
+            return;
+         }
+
+         String id = args[2].toLowerCase(Locale.ROOT);
+         if (!id.equals("zaza") && !id.equals("mobutu")) {
+            Msg.err(sender, "Il n'y a que zaza et mobutu.");
+            return;
+         }
+
+         this.pl.getConfig().set("pnj." + id + ".pseudo", args[3]);
+         this.pl.getConfig().set("pnj." + id + ".texture", "");
+         this.pl.saveConfig();
+         this.pl.npcs().spawn(id);
+         Msg.ok(sender, "Skin de <white>" + id + "</white> copie sur le compte <white>" + args[3] + "</white> <gray>(quelques secondes)</gray>.");
+         return;
+      }
+
+      String id = args[1].toLowerCase(Locale.ROOT);
+      if (!id.equals("zaza") && !id.equals("mobutu")) {
+         Msg.err(sender, "Il n'y a que zaza et mobutu.");
+         return;
+      }
+
+      if (Msg.noConsole(sender)) {
+         return;
+      }
+
+      Player p = (Player)sender;
+      if (this.pl.worlds().zoneOf(p) != Zone.HUB) {
+         Msg.err(sender, "Les PNJ vivent dans le hub : place-toi la-bas d'abord.");
+         return;
+      }
+
+      this.pl.npcs().setPosition(id, p.getLocation());
+      this.pl.npcs().spawn(id);
+      Msg.ok(sender, "<white>" + id + "</white> est pose ici.");
+   }
+
+   private static Zone parseZone(String name) {
+      String wanted = name.toLowerCase(Locale.ROOT);
+
+      for (Zone zone : Zone.values()) {
+         if (zone.name().toLowerCase(Locale.ROOT).equals(wanted) || zone.shortLabel().toLowerCase(Locale.ROOT).equals(wanted)) {
+            return zone;
+         }
+      }
+
+      return null;
+   }
+
    public List<String> onTabComplete(CommandSender var1, Command var2, String var3, String[] var4) {
       ArrayList<String> var5 = new ArrayList<>();
       if (var1 instanceof Player var6 && !this.pl.ranks().isAdmin(var6)) {
          return var5;
       } else {
          if (var4.length == 1) {
-            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes"));
+            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj"));
          } else if (var4.length == 2) {
             String var10 = var4[0].toLowerCase(Locale.ROOT);
             switch (var10) {
