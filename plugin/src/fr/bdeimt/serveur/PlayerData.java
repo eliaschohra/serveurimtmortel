@@ -34,6 +34,8 @@ public final class PlayerData {
    public volatile String muteReason;
    public final Set<UUID> ignores = ConcurrentHashMap.newKeySet();
    public volatile boolean tpaOff;
+   /** A tue Zaza au moins une fois : le Griddidi est debloque. */
+   public volatile boolean griddidi;
    public final List<String> pendingLoots = new ArrayList<>();
    public volatile long firstJoin;
    public volatile boolean dirty;
@@ -100,6 +102,7 @@ public final class PlayerData {
       }
 
       var3.tpaOff = var1.getBoolean("tpa-off");
+      var3.griddidi = var1.getBoolean("griddidi");
       var3.pendingLoots.addAll(var1.getStringList("lots-en-attente"));
       var3.firstJoin = var1.getLong("premiere-connexion");
       return var3;
@@ -136,6 +139,7 @@ public final class PlayerData {
 
       var1.set("ignores", var6);
       var1.set("tpa-off", this.tpaOff);
+      var1.set("griddidi", this.griddidi);
       var1.set("lots-en-attente", new ArrayList<>(this.pendingLoots));
       var1.set("premiere-connexion", this.firstJoin);
       return var1.saveToString();

@@ -83,6 +83,8 @@ public final class Shops implements Listener {
 
       if (!file.exists()) {
          this.pl.saveResource("marchands.yml", false);
+      } else {
+         this.upgrade(file);
       }
 
       YamlConfiguration yml = YamlConfiguration.loadConfiguration(file);
@@ -120,6 +122,31 @@ public final class Shops implements Listener {
       }
 
       this.pl.getLogger().info(this.shops.size() + " marchand(s), " + offers + " offre(s).");
+   }
+
+   /**
+    * Quand le plugin apporte un catalogue plus recent (numero « version »),
+    * il remplace celui du serveur ; l'ancien est garde a cote, au cas ou.
+    */
+   private void upgrade(File file) {
+      try (java.io.InputStream in = this.pl.getResource("marchands.yml")) {
+         if (in == null) {
+            return;
+         }
+
+         YamlConfiguration bundled = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+         int wanted = bundled.getInt("version", 0);
+         int current = YamlConfiguration.loadConfiguration(file).getInt("version", 0);
+
+         if (wanted > current) {
+            File old = new File(this.pl.getDataFolder(), "marchands-ancien.yml");
+            java.nio.file.Files.copy(file.toPath(), old.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            this.pl.saveResource("marchands.yml", true);
+            this.pl.getLogger().info("marchands.yml mis a jour (version " + wanted + ") ; l'ancien est dans marchands-ancien.yml.");
+         }
+      } catch (Exception ex) {
+         this.pl.getLogger().warning("marchands.yml : mise a jour impossible (" + ex.getMessage() + ")");
+      }
    }
 
    /** « MATERIAU LOT achat=X vente=Y livre=enchant:niveau » */

@@ -48,23 +48,25 @@ public final class SkyHub {
    private int tipIndex;
    private int seconds;
 
-   private static final String TEXT = "<gradient:#7FE3FF:#4FC3FF:#B66BFF><bold>✦ SKYBLOCK ✦</bold></gradient>\n"
-      + "<#E8E8E8>Une île dans le vide, et tout à construire.</#E8E8E8>\n \n"
-      + "<#7FE3FF><bold>Démarrer</bold></#7FE3FF>\n"
-      + "<#55FF88>/ile creer</#55FF88> <gray>fabrique ta propre île (une seule par personne)</gray>\n"
-      + "<#55FF88>/ile</#55FF88> <gray>rentrer sur ton île  ·  </gray><#55FF88>/ile hub</#55FF88> <gray>revenir ici, au lobby du skyblock</gray>\n"
-      + "<#55FF88>/ile aide</#55FF88> <gray>toutes les commandes de l'île</gray>\n \n"
-      + "<#7FE3FF><bold>Jouer à plusieurs</bold></#7FE3FF>\n"
-      + "<#55FF88>/ile invite</#55FF88> <gray>‹pseudo› : ton ami vient habiter et construire chez toi</gray>\n"
-      + "<#FF5555><bold>⚠ Accepter une invitation EFFACE ta propre île, pour toujours.</bold></#FF5555>\n"
-      + "<gray>Visiter sans habiter : </gray><#55FF88>/ile tp</#55FF88> <gray>‹pseudo›  ·  </gray><#55FF88>/tpa</#55FF88> <gray>‹pseudo›</gray>\n \n"
-      + "<#FFD25E><bold>Argent et échanges</bold></#FFD25E>\n"
-      + "<gray>Les marchands d'ici achètent tes récoltes et vendent ce qui manque.</gray>\n"
-      + "<#FFD25E>/solde</#FFD25E> <gray>ton argent  ·  </gray><#FFD25E>/payer</#FFD25E> <gray>‹pseudo› ‹montant›  ·  </gray><#FFD25E>/echange</#FFD25E> <gray>‹pseudo›</gray>\n"
-      + "<#FFD25E>/marche</#FFD25E> <gray>acheter aux joueurs  ·  </gray><#FFD25E>/marche vendre</#FFD25E> <gray>‹prix› l'objet en main</gray>\n \n"
-      + "<#B66BFF>/vote</#B66BFF> <gray>‹pseudo› : une voix par jour pour l'île de quelqu'un</gray>\n \n"
-      + "<#FF5555>Tomber dans le vide = mort : ton stuff est perdu,</#FF5555>\n"
-      + "<#FF5555>et tu réapparais sur ton île.</#FF5555> <gray>Pas de combat entre joueurs.</gray>";
+   private static final String TEXT = "<gradient:#7FE3FF:#4FC3FF:#B66BFF><bold>✦ SKYBLOCK ✦</bold></gradient>\n \n"
+      + "<#55FF88>/ile creer</#55FF88> <white>ta propre île (une par personne)</white>\n"
+      + "<#55FF88>/ile</#55FF88> <white>rentrer chez toi</white>  <dark_gray>·</dark_gray>  <#55FF88>/ile hub</#55FF88> <white>revenir ici</white>\n"
+      + "<#55FF88>/ile invite ‹pseudo›</#55FF88> <white>jouer à plusieurs</white>\n"
+      + "<#FF6B6B><bold>⚠ Rejoindre une île EFFACE la tienne</bold></#FF6B6B>\n"
+      + "<#55FF88>/ile tp ‹pseudo›</#55FF88> <white>visiter une île</white>\n \n"
+      + "<#FFD25E>Les marchands d'ici achètent et vendent tout</#FFD25E>\n"
+      + "<#FFD25E>/solde  /payer  /marche  /echange</#FFD25E>\n"
+      + "<#C9A6FF>/vote ‹pseudo›</#C9A6FF> <white>une voix par jour pour une île</white>\n \n"
+      + "<#FF6B6B>Le vide tue : stuff perdu, retour sur ton île</#FF6B6B>\n"
+      + "<#55FF88>/ile aide</#55FF88> <white>toutes les commandes</white>";
+
+   /**
+    * La place du panneau, par rapport au point d'arrivee : derriere l'arbre
+    * aux champignons, a gauche en arrivant, quelques blocs au-dessus des
+    * tetes. L'endroit a ete choisi en lisant la carte SkySpawn bloc par
+    * bloc : rien ne le traverse, et on le voit du point d'arrivee.
+    */
+   private static final double[] OFFSET = new double[]{-7.7, 6.0, -6.4};
 
    /** Le grand panneau des regles, devant le point d'arrivee. */
    public void decorate() {
@@ -86,15 +88,13 @@ public final class SkyHub {
          return;
       }
 
-      Location configured = Util.loc(this.pl.getConfig().getString("mondes.skyhub.hologramme"));
+      Location configured = Util.loc(this.pl.getConfig().getString("mondes.skyhub.panneau"));
       Location at;
 
       if (configured != null && configured.getWorld() == w) {
          at = configured;
       } else {
-         // Juste devant le point d'arrivee, a hauteur des yeux : impossible a rater.
-         double yaw = Math.toRadians(spawn.getYaw());
-         at = spawn.clone().add(-Math.sin(yaw) * 6.0, 1.2, Math.cos(yaw) * 6.0);
+         at = spawn.clone().add(OFFSET[0], OFFSET[1], OFFSET[2]);
       }
 
       // Sans ce ticket, le chunk se decharge des que personne n'est a cote,
@@ -106,24 +106,25 @@ public final class SkyHub {
          d.text(Msg.mm(TEXT));
          d.setBillboard(Billboard.VERTICAL);
          d.setAlignment(TextAlignment.CENTER);
-         d.setLineWidth(460);
+         d.setLineWidth(300);
          d.setShadowed(true);
-         d.setBackgroundColor(Color.fromARGB(160, 8, 12, 28));
+         // Fond presque opaque : sur le ciel et les feuilles, le texte se lit.
+         d.setBackgroundColor(Color.fromARGB(215, 10, 14, 30));
          d.setViewRange(4.0F);
-         d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.2F, 1.2F, 1.2F), new AxisAngle4f()));
+         d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.75F, 0.75F, 0.75F), new AxisAngle4f()));
          d.setPersistent(false);
          d.getPersistentDataContainer().set(this.key, PersistentDataType.BYTE, (byte)1);
       });
 
-      this.tipLine = w.spawn(at.clone().add(0.0, -0.9, 0.0), TextDisplay.class, d -> {
+      this.tipLine = w.spawn(at.clone().add(0.0, -0.75, 0.0), TextDisplay.class, d -> {
          d.text(Msg.mm(this.tipText()));
          d.setBillboard(Billboard.VERTICAL);
          d.setAlignment(TextAlignment.CENTER);
-         d.setLineWidth(460);
+         d.setLineWidth(300);
          d.setShadowed(true);
-         d.setBackgroundColor(Color.fromARGB(160, 40, 30, 4));
+         d.setBackgroundColor(Color.fromARGB(215, 48, 34, 4));
          d.setViewRange(4.0F);
-         d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.0F, 1.0F, 1.0F), new AxisAngle4f()));
+         d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.6F, 0.6F, 0.6F), new AxisAngle4f()));
          d.setPersistent(false);
          d.getPersistentDataContainer().set(this.key, PersistentDataType.BYTE, (byte)1);
       });
@@ -141,7 +142,7 @@ public final class SkyHub {
 
    /** {@code /imt monde holo skyhub} : deplacer le panneau la ou l'on est. */
    public void moveHologram(Location at) {
-      this.pl.getConfig().set("mondes.skyhub.hologramme", Util.loc(at.clone().add(0.0, 2.5, 0.0)));
+      this.pl.getConfig().set("mondes.skyhub.panneau", Util.loc(at.clone().add(0.0, 2.5, 0.0)));
       this.pl.saveConfig();
       this.decorate();
    }

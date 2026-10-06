@@ -1,3 +1,12 @@
+# BDEIMT v3.3 — mise à jour
+
+1. Dans `plugins/`, remplace `BDEIMT.jar`, puis `/stop`.
+2. Rien d'autre : le nouveau catalogue des marchands remplace l'ancien tout seul (l'ancien est gardé dans `plugins/BDEIMT/marchands-ancien.yml`).
+
+Nouveautés : panneau du lobby skyblock déplacé (plus petit, plus haut, lisible), arrivée tournée vers lui ; 50 pièces au départ ; tout s'achète et se revend chez les marchands, nourriture comprise, sans combine pour s'enrichir à l'infini ; tuer Zaza débloque le Griddidi (une fois).
+
+---
+
 # BDEIMT v3.2 — mise à jour
 
 1. Dans `plugins/`, remplace `BDEIMT.jar` (un seul fichier BDEIMT), puis `/stop`.

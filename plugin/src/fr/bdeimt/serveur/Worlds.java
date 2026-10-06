@@ -48,7 +48,7 @@ public final class Worlds implements Listener {
    private static final Map<Zone, String> DEFAULT_SPAWNS = Map.of(
       Zone.HUB, "bdeimt_hub;191.5;-44.0;142.5;0.0;0.0",
       Zone.PARKOUR, "bdeimt_parkour;0.5;43.0;-0.5;1.5;0.3",
-      Zone.SKYHUB, "bdeimt_skyspawn;44.5;86.0;32.5;0.0;0.0"
+      Zone.SKYHUB, "bdeimt_skyspawn;44.5;86.0;32.5;130.0;-20.0"
    );
    private final BDEIMT pl;
    private final Map<Zone, BuildRule> buildRules = new EnumMap<>(Zone.class);

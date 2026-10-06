@@ -290,6 +290,7 @@ public final class Npcs implements Listener {
       this.respawning.add(id);
 
       if (isZaza(id)) {
+         this.griddidi(e.getEntity().getKiller());
          Bukkit.getScheduler().runTaskLater(this.pl, () -> this.spawn(id), RESPAWN_TICKS);
          return;
       }
@@ -298,6 +299,56 @@ public final class Npcs implements Listener {
          this.mobutuFalls(e.getEntity().getKiller());
          Bukkit.getScheduler().runTaskLater(this.pl, () -> this.spawn(id), RESPAWN_TICKS * 10L);
       }
+   }
+
+   /**
+    * Tuer Zaza, ou qu'elle soit, debloque le Griddidi. Une seule fois par
+    * joueur suffit : le message ne revient pas aux fois suivantes.
+    */
+   private void griddidi(Player killer) {
+      if (killer == null || !this.pl.auth().isLogged(killer)) {
+         return;
+      }
+
+      PlayerData data = this.pl.data().get(killer);
+
+      if (data.griddidi) {
+         return;
+      }
+
+      data.griddidi = true;
+      data.touch();
+      killer.showTitle(
+         net.kyori.adventure.title.Title.title(
+            Msg.mm("<gradient:#FFD25E:#FF2E93><bold>Tu débloques le Griddidi !</bold></gradient>"),
+            Msg.mm("<#FFD6EA>Remporte n'importe quel battle d'aura sans le moindre effort</#FFD6EA>"),
+            net.kyori.adventure.title.Title.Times.times(
+               java.time.Duration.ofMillis(300L), java.time.Duration.ofSeconds(6L), java.time.Duration.ofSeconds(2L)
+            )
+         )
+      );
+      Bukkit.getScheduler().runTaskLater(this.pl, () -> {
+         if (killer.isOnline()) {
+            killer.showTitle(
+               net.kyori.adventure.title.Title.title(
+                  Msg.mm("<#FF5555><bold>Attention...</bold></#FF5555>"),
+                  Msg.mm("<#FFB3B3>il y aura des points négatifs. Seule l'histoire s'en souviendra.</#FFB3B3>"),
+                  net.kyori.adventure.title.Title.Times.times(
+                     java.time.Duration.ofMillis(300L), java.time.Duration.ofSeconds(5L), java.time.Duration.ofSeconds(2L)
+                  )
+               )
+            );
+            Util.sound(killer, "entity.wither.ambient", 0.7F, 1.6F);
+         }
+      }, 150L);
+      Msg.raw(killer, "<dark_gray>" + "─".repeat(42) + "</dark_gray>");
+      Msg.raw(killer, "<gradient:#FFD25E:#FF2E93><bold>  ✦ Tu débloques le Griddidi ! ✦</bold></gradient>");
+      Msg.raw(killer, "<#FFD6EA>  Remporte n'importe quel battle d'aura sans le moindre effort,</#FFD6EA>");
+      Msg.raw(killer, "<#FFB3B3>  attention il y aura des points négatifs...</#FFB3B3>");
+      Msg.raw(killer, "<gray><i>  seule l'histoire s'en souviendra.</i></gray>");
+      Msg.raw(killer, "<dark_gray>" + "─".repeat(42) + "</dark_gray>");
+      Util.sound(killer, "ui.toast.challenge_complete", 1.0F, 0.8F);
+      Util.sound(killer, "entity.player.levelup", 1.0F, 0.6F);
    }
 
    /** Le seul evenement qui traverse tous les mondes a la fois. */

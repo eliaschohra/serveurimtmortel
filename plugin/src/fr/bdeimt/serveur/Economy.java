@@ -22,7 +22,7 @@ import org.bukkit.entity.Player;
  */
 public final class Economy implements CommandExecutor, TabCompleter {
    /** Ce qu'on trouve sur son compte en creant sa premiere ile. */
-   public static final long STARTING_MONEY = 100L;
+   public static final long STARTING_MONEY = 50L;
 
    private final BDEIMT pl;
 
