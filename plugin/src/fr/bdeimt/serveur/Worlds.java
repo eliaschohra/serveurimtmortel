@@ -468,6 +468,10 @@ public final class Worlds implements Listener {
       "aura", "fly", "ghoule", "traq", "oniris", "sugardaddimt", "wei", "tunnel",
       "sethome", "home", "delhome", "homes"
    );
+   /** Ce que le skyblock reprend de la survie : les votes, les kits, le marche. */
+   private static final java.util.Set<String> SKYBLOCK_AUSSI = java.util.Set.of(
+      "vote", "probavote", "probavotes", "kit", "kits", "marche", "marché", "ile", "île", "is", "island", "skyblock"
+   );
    /** Les teleportations et l'echange, autorises aussi dans le skyblock. */
    private static final java.util.Set<String> ENTRE_JOUEURS = java.util.Set.of(
       "tpa", "tpahere", "tpaccept", "tpyes", "tpdeny", "tpno", "tpcancel", "tpatoggle", "echange"
@@ -481,6 +485,11 @@ public final class Worlds implements Listener {
       }
 
       if (zone == Zone.SURVIE) {
+         return true;
+      }
+
+      boolean sky = zone == Zone.SKYBLOCK || zone == Zone.SKYHUB;
+      if (sky && SKYBLOCK_AUSSI.contains(name)) {
          return true;
       }
 

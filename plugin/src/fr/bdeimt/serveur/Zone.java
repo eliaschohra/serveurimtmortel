@@ -19,7 +19,7 @@ public enum Zone {
    /** Le parkour du mois, commun a tout le monde. */
    PARKOUR("bdeimt_parkour", "parkour", "le Parkour", "<#FFD25E>", GameMode.ADVENTURE, false, false, false),
    /** La place centrale du skyblock : fermes et mines communes. */
-   SKYHUB("bdeimt_skyhub", "skyblock", "le Hub Skyblock", "<#7FE3FF>", GameMode.SURVIVAL, false, false, true),
+   SKYHUB("bdeimt_skyhub", "skyblock", "le Hub Skyblock", "<#7FE3FF>", GameMode.SURVIVAL, false, true, true),
    /** Les iles du skyblock, toutes dans le meme monde. */
    SKYBLOCK("bdeimt_skyblock", "skyblock", "le Skyblock", "<#7FE3FF>", GameMode.SURVIVAL, false, true, true),
    /** Les parcelles creatives. */

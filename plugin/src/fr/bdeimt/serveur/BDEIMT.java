@@ -49,6 +49,8 @@ public final class BDEIMT extends JavaPlugin {
    private Npcs npcs;
    private Parkour parkour;
    private Plots plots;
+   private Skyblock skyblock;
+   private SkyHub skyhub;
 
    public static BDEIMT get() {
       return instance;
@@ -146,6 +148,14 @@ public final class BDEIMT extends JavaPlugin {
       return this.plots;
    }
 
+   public Skyblock skyblock() {
+      return this.skyblock;
+   }
+
+   public SkyHub skyhub() {
+      return this.skyhub;
+   }
+
    public String adminName() {
       return this.getConfig().getString("admin", "curlybrownhair");
    }
@@ -185,6 +195,8 @@ public final class BDEIMT extends JavaPlugin {
       this.parkour = new Parkour(this);
       this.parkour.load();
       this.plots = new Plots(this);
+      this.skyblock = new Skyblock(this);
+      this.skyhub = new SkyHub(this);
       this.fly = new Fly(this);
       this.votes = new Votes(this);
       this.kits = new Kits(this);
@@ -216,6 +228,8 @@ public final class BDEIMT extends JavaPlugin {
       this.npcs.spawnAll();
       this.parkour.refreshHologram();
       this.plots.init();
+      this.skyblock.init();
+      this.skyhub.init();
 
       for (Listener var5 : new Listener[]{
          this.auth,
@@ -240,6 +254,8 @@ public final class BDEIMT extends JavaPlugin {
          this.npcs,
          this.parkour,
          this.plots,
+         this.skyblock,
+         this.skyhub,
          new FunItems(),
          new Menu.Listen()
       }) {
@@ -268,6 +284,8 @@ public final class BDEIMT extends JavaPlugin {
       this.cmd("hub", this.hub, null);
       this.cmd("parkour", this.parkour, this.parkour);
       this.cmd("parcelle", this.plots, this.plots);
+      this.cmd("ile", this.skyblock, this.skyblock);
+      this.cmd("marche", this.skyhub, null);
 
       for (String var26 : new String[]{"tpa", "tpahere", "tpaccept", "tpdeny", "tpcancel", "tpatoggle", "sethome", "home", "delhome", "homes", "spawn"}) {
          this.cmd(var26, this.teleports, this.teleports);
@@ -301,6 +319,11 @@ public final class BDEIMT extends JavaPlugin {
          this.data.saveDirty();
          this.votes.updateSidebar();
       }, 1200L, 1200L);
+      // Le ble repousse toutes les 20 minutes, les betes toutes les 30,
+      // et les filons de la mine se reforment chaque heure.
+      Bukkit.getScheduler().runTaskTimer(this, this.skyhub::regrowFarm, 24000L, 24000L);
+      Bukkit.getScheduler().runTaskTimer(this, this.skyhub::restock, 36000L, 36000L);
+      Bukkit.getScheduler().runTaskTimer(this, this.skyhub::regrowVeins, 72000L, 72000L);
       long var24 = Math.max(1L, this.getConfig().getLong("astuces-toutes-les-minutes", 20L)) * 1200L;
       long var6 = Math.max(1L, this.getConfig().getLong("rappel-guide-toutes-les-minutes", 120L)) * 1200L;
       Bukkit.getScheduler().runTaskTimer(this, this.announcer::tip, var24, var24);
@@ -347,6 +370,20 @@ public final class BDEIMT extends JavaPlugin {
       try {
          if (this.plots != null) {
             this.plots.save();
+         }
+      } catch (Throwable t) {
+      }
+
+      try {
+         if (this.skyblock != null) {
+            this.skyblock.save();
+         }
+      } catch (Throwable t) {
+      }
+
+      try {
+         if (this.skyhub != null) {
+            this.skyhub.clearAll();
          }
       } catch (Throwable t) {
       }

@@ -127,6 +127,13 @@ commands:
     description: Un feu d'artifice du WEI
   tunnel:
     description: Raconte une histoire... sans le vouloir (1 fois par heure)
+  ile:
+    description: Ton ile du skyblock
+    usage: /ile creer|tp|invite|hub|supprimer
+    aliases: [island, is, skyblock, "île"]
+  marche:
+    description: Le marche du hub skyblock
+    aliases: ["marché", "marchand"]
   parcelle:
     description: Ta parcelle en creatif
     usage: /parcelle creer|tp|invite|ban|vote|top|supprimer
