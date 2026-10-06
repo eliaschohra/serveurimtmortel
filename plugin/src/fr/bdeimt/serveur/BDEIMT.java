@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -319,7 +321,28 @@ public final class BDEIMT extends JavaPlugin {
       this.cmd("register", this.auth, null);
       this.cmd("login", this.auth, null);
       this.cmd("changemdp", this.auth, null);
-      this.cmd("vote", this.votes, null);
+      // Tab apres /vote : les listes en survie, les proprietaires d'ile au skyblock.
+      this.cmd("vote", this.votes, (sender, command, label, args) -> {
+         List<String> out = new ArrayList<>();
+
+         if (args.length != 1 || !(sender instanceof Player p)) {
+            return out;
+         }
+
+         Zone zone = this.worlds.zoneOf(p);
+
+         if (zone == Zone.SKYBLOCK || zone == Zone.SKYHUB) {
+            for (Skyblock.Island island : this.skyblock.ranking()) {
+               out.add(island.ownerName);
+            }
+         } else {
+            out.addAll(this.kits.voteKitIds());
+         }
+
+         String start = args[0].toLowerCase(java.util.Locale.ROOT);
+         out.removeIf(name -> !name.toLowerCase(java.util.Locale.ROOT).startsWith(start));
+         return out;
+      });
       this.cmd("probavote", this.votes, null);
       this.cmd("kit", this.kits, this.kits);
       this.cmd("kits", this.kits, this.kits);

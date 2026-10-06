@@ -146,6 +146,21 @@ public final class Sounds {
       });
    }
 
+   /**
+    * Le son joue pour chaque liste. Le freestyle range sous « zimtzimt »
+    * dans le pack est en fait celui d'IMTmortel : on echange ici, ce qui
+    * evite de refaire et renvoyer le pack. Une liste absente de ce tableau
+    * joue le son qui porte son nom.
+    */
+   private static final java.util.Map<String, String> SWAP = java.util.Map.of(
+      "imtmortel", "zimtzimt",
+      "zimtzimt", "imtmortel"
+   );
+
+   private static String soundOf(String list) {
+      return SWAP.getOrDefault(list, list);
+   }
+
    /** L'extrait d'une liste, quand on prend son kit. En survie seulement. */
    public void playList(Player p, String list) {
       if (this.url().isEmpty() || this.pl.worlds().zoneOf(p) != Zone.SURVIE) {
@@ -153,7 +168,7 @@ public final class Sounds {
       }
 
       try {
-         p.playSound(Sound.sound(Key.key("bdeimt", "liste." + list), Sound.Source.MASTER, 1.0F, 1.0F), Sound.Emitter.self());
+         p.playSound(Sound.sound(Key.key("bdeimt", "liste." + soundOf(list)), Sound.Source.MASTER, 1.0F, 1.0F), Sound.Emitter.self());
       } catch (Throwable t) {
       }
    }
