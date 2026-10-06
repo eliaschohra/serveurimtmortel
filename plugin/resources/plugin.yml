@@ -1,10 +1,13 @@
 name: BDEIMT
-version: '2.7'
+version: '2.8'
 main: fr.bdeimt.serveur.BDEIMT
 api-version: '1.21'
 author: Elias
 description: Serveur du BDE de l'IMT - hub, survie, parkour, skyblock, parcelles creatives.
-softdepend: [SuperVanish, PremiumVanish, CoreProtect, GrimAC, Multiverse-Core]
+softdepend: [SuperVanish, PremiumVanish, CoreProtect, GrimAC]
+# Charge avant Multiverse : nos cartes sont importees et reparees avant
+# qu'il ne tente quoi que ce soit dessus.
+loadbefore: [Multiverse-Core]
 load: POSTWORLD
 
 permissions:

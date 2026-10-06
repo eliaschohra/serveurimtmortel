@@ -13,13 +13,13 @@ public enum Zone {
    /** L'ile flottante ou l'on arrive, le temps de /login. */
    LOGIN("bdeimt_lobby", "lobby", "la Connexion", "<#8899AA>", GameMode.ADVENTURE, false, false, false),
    /** Le hub : on s'y promene, on choisit son mode de jeu. */
-   HUB("bdeimt_hub", "lobby", "le Hub", "<#4FC3FF>", GameMode.ADVENTURE, false, false, false),
+   HUB("bdeimt_hub", "lobby", "le Lobby", "<#4FC3FF>", GameMode.ADVENTURE, false, false, false),
    /** La survie historique du serveur, avec le Nether et l'End. */
    SURVIE(null, "survie", "la Survie", "<#55FF88>", GameMode.SURVIVAL, true, true, true),
    /** Le parkour du mois, commun a tout le monde. */
    PARKOUR("bdeimt_parkour", "parkour", "le Parkour", "<#FFD25E>", GameMode.ADVENTURE, false, false, false),
    /** La place centrale du skyblock : fermes et mines communes. */
-   SKYHUB("bdeimt_skyhub", "skyblock", "le Hub Skyblock", "<#7FE3FF>", GameMode.SURVIVAL, false, true, true),
+   SKYHUB("bdeimt_skyhub", "skyblock", "le Skyblock", "<#7FE3FF>", GameMode.SURVIVAL, false, true, true),
    /** Les iles du skyblock, toutes dans le meme monde. */
    SKYBLOCK("bdeimt_skyblock", "skyblock", "le Skyblock", "<#7FE3FF>", GameMode.SURVIVAL, false, true, true),
    /** Les parcelles creatives. */

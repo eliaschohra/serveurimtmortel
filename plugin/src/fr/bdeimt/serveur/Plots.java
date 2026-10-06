@@ -351,7 +351,7 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
 
    private void create(Player p) {
       if (this.pl.worlds().zoneOf(p) != Zone.PARCELLES) {
-         Msg.err(p, "Il faut être dans le monde des parcelles (boussole du hub).");
+         Msg.err(p, "Il faut être dans le monde des parcelles (boussole du lobby).");
          return;
       }
 

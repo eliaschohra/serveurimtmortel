@@ -474,6 +474,11 @@ public final class Lobby implements Listener {
       var1.teleport(this.loginSpawn());
       var1.setGameMode(GameMode.ADVENTURE);
       this.freeze(var1);
+
+      try {
+         var1.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+      } catch (Throwable var3) {
+      }
    }
 
    private void freeze(Player var1) {

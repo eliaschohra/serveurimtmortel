@@ -59,10 +59,88 @@ public final class Worlds implements Listener {
 
    // ---------------------------------------------------------------- mondes
 
-   /** Charge les mondes deposes par FileZilla (hub et parkour). */
+   // ------------------------------------------------- cartes telechargees
+   //
+   // Depuis la version 26 de Minecraft, un serveur ne range plus chaque monde
+   // dans son propre dossier a la racine. Tous les mondes sont des
+   // « dimensions » du monde principal :
+   //
+   //     world/dimensions/minecraft/overworld/     la survie
+   //     world/dimensions/minecraft/bdeimt_hub/    le lobby
+   //
+   // Une carte deposee a l'ancienne (bdeimt_hub/ a la racine) est donc
+   // IMPORTEE par Paper au premier chargement : il deplace ses fichiers
+   // region/, entities/ et poi/ dans le nouveau dossier, puis supprime
+   // l'ancien. Le detail est dans LegacyCraftBukkitWorldMigration, cote Paper.
+   //
+   // Le piege : si une importation echoue en cours de route, une partie des
+   // fichiers est deja partie dans le nouveau dossier. Toutes les tentatives
+   // suivantes s'arretent alors sur « Refusing to overwrite existing migrated
+   // file », que l'on voit remonter en « Failed to migrate legacy world ».
+   // C'est ce qui bloquait le lobby et le parkour. On repare donc ce cas
+   // avant de relancer l'importation.
+
+   /** Charge les cartes deposees par FileZilla : le lobby et le parkour. */
    public void init() {
       this.load(Zone.HUB);
       this.load(Zone.PARKOUR);
+   }
+
+   /** Le dossier ou Paper range la dimension d'un monde : world/dimensions/minecraft/‹nom›. */
+   public java.nio.file.Path dimensionPath(String name) {
+      java.nio.file.Path dims = null;
+
+      // Le plus sur : lire ou Paper a range un monde que nous avons nous-memes
+      // cree, l'ile de connexion. Ses voisins sont forcement au meme endroit.
+      try {
+         World own = Bukkit.getWorld(Lobby.WORLD);
+
+         if (own != null) {
+            java.nio.file.Path ownPath = own.getWorldPath();
+
+            if (ownPath.getParent() != null && ownPath.getFileName().toString().equals(Lobby.WORLD)) {
+               return ownPath.getParent().resolve(name.toLowerCase(java.util.Locale.ENGLISH).replace(" ", "_"));
+            }
+         }
+      } catch (Throwable t) {
+      }
+
+      try {
+         // A defaut, le chemin reel du monde principal donne la racine des
+         // dimensions, sans rien supposer sur le nom du dossier du serveur.
+         java.nio.file.Path overworld = ((World)Bukkit.getWorlds().get(0)).getWorldPath();
+         java.nio.file.Path candidate = overworld.getParent() == null ? null : overworld.getParent().getParent();
+
+         if (candidate != null && candidate.getFileName() != null && candidate.getFileName().toString().equals("dimensions")) {
+            dims = candidate;
+         }
+      } catch (Throwable t) {
+      }
+
+      if (dims == null) {
+         dims = Bukkit.getWorldContainer().toPath().resolve(((World)Bukkit.getWorlds().get(0)).getName()).resolve("dimensions");
+      }
+
+      return dims.resolve("minecraft").resolve(name.toLowerCase(java.util.Locale.ENGLISH).replace(" ", "_"));
+   }
+
+   /** L'ancien dossier, a la racine du serveur, tel qu'il a ete depose. */
+   private File legacyFolder(Zone zone) {
+      return new File(Bukkit.getWorldContainer(), zone.world);
+   }
+
+   /** Une carte deposee a l'ancienne, pas encore importee par Paper. */
+   private boolean hasLegacyMap(Zone zone) {
+      return new File(this.legacyFolder(zone), "level.dat").exists();
+   }
+
+   /** Un chemin lisible pour les messages : relatif au dossier du serveur. */
+   private static String shown(java.nio.file.Path path) {
+      try {
+         return Bukkit.getWorldContainer().toPath().toAbsolutePath().relativize(path.toAbsolutePath()).toString();
+      } catch (Throwable t) {
+         return path.toString();
+      }
    }
 
    /**
@@ -74,51 +152,52 @@ public final class Worlds implements Listener {
          return "Monde principal du serveur.";
       }
 
+      if (!this.enabled(zone)) {
+         return "Ferme dans config.yml (modes." + zone.group + ": false).";
+      }
+
       if (Bukkit.getWorld(zone.world) != null) {
          return "Charge.";
       }
 
-      File folder = new File(Bukkit.getWorldContainer(), zone.world);
+      java.nio.file.Path migrated = this.dimensionPath(zone.world);
 
-      if (!folder.exists()) {
-         File[] siblings = Bukkit.getWorldContainer().listFiles(File::isDirectory);
-         StringBuilder near = new StringBuilder();
+      if (this.hasLegacyMap(zone)) {
+         return "Carte presente dans " + zone.world + "/, mais Paper n'a pas reussi a l'importer. La cause exacte est dans la console, juste apres « BDEIMT » au demarrage.";
+      }
 
-         if (siblings != null) {
-            for (File sibling : siblings) {
-               if (sibling.getName().toLowerCase(java.util.Locale.ROOT).replace(" ", "").replace("-", "").replace("_", "")
-                     .contains(zone.world.replace("bdeimt_", ""))) {
-                  near.append(" J'y vois « ").append(sibling.getName()).append(" » : renomme-le exactement « ").append(zone.world).append(" ».");
-               }
+      if (java.nio.file.Files.isDirectory(migrated)) {
+         return "Carte deja importee dans " + shown(migrated) + " mais pas chargee : regarde la console au demarrage.";
+      }
+
+      File folder = this.legacyFolder(zone);
+
+      if (folder.isDirectory()) {
+         File nested = nestedWorld(folder);
+
+         if (nested != null) {
+            return "Le dossier contient un autre dossier (« " + nested.getName() + " ») qui est le vrai monde : redemarre, le plugin le remet a plat.";
+         }
+
+         return "Le dossier " + zone.world + "/ n'a pas de level.dat : ce n'est pas un monde Minecraft.";
+      }
+
+      StringBuilder near = new StringBuilder();
+      File[] siblings = Bukkit.getWorldContainer().listFiles(File::isDirectory);
+
+      if (siblings != null) {
+         String wanted = zone.world.replace("bdeimt_", "");
+
+         for (File sibling : siblings) {
+            String flat = sibling.getName().toLowerCase(java.util.Locale.ROOT).replace(" ", "").replace("-", "").replace("_", "");
+
+            if (flat.contains(wanted) && !sibling.getName().equals(zone.world) && !sibling.getName().contains("mises-de-cote") && !sibling.getName().contains("import-rate")) {
+               near.append(" J'y vois « ").append(sibling.getName()).append(" » : renomme-le exactement « ").append(zone.world).append(" ».");
             }
          }
-
-         return "Dossier introuvable dans " + Bukkit.getWorldContainer().getPath() + "." + near;
       }
 
-      if (!folder.isDirectory()) {
-         return zone.world + " existe mais ce n'est pas un dossier.";
-      }
-
-      if (new File(folder, "level.dat").exists()) {
-         if (new File(folder, "DIM-1").isDirectory() || new File(folder, "DIM1").isDirectory()) {
-            return "Carte faite en solo : ses dossiers DIM-1 et DIM1 empechent le serveur de la convertir."
-               + " Ils sont vides, supprime-les par FileZilla, ou tape /imt monde charger "
-               + zone.name().toLowerCase(java.util.Locale.ROOT) + ".";
-         }
-
-         return "Dossier present mais monde non charge : regarde la console au demarrage.";
-      }
-
-      File nested = nestedWorld(folder);
-
-      if (nested != null) {
-         return "Le dossier contient un autre dossier (« " + nested.getName()
-            + " ») qui est le vrai monde. Il faut remonter son contenu d'un cran. Le plugin peut le faire : /imt monde charger "
-            + zone.name().toLowerCase(java.util.Locale.ROOT);
-      }
-
-      return "Dossier present mais il n'y a pas de level.dat dedans : ce n'est pas un monde Minecraft.";
+      return "Introuvable : ni " + zone.world + "/ a la racine du serveur, ni " + shown(migrated) + "." + near;
    }
 
    /** Un dossier de monde pose par erreur a l'interieur d'un autre. */
@@ -150,7 +229,7 @@ public final class Worlds implements Listener {
     * plus, et Minecraft ne trouve plus le monde.
     */
    public boolean unnest(Zone zone) {
-      File folder = new File(Bukkit.getWorldContainer(), zone.world);
+      File folder = this.legacyFolder(zone);
       File nested = nestedWorld(folder);
 
       if (nested == null || new File(folder, "level.dat").exists()) {
@@ -176,70 +255,50 @@ public final class Worlds implements Listener {
    }
 
    /**
-    * Prepare le dossier d'un monde telecharge avant de le confier au serveur.
-    *
-    * <p>Une carte faite en solo est un monde « a l'ancienne » : son Nether et
-    * son End sont ranges dans des sous-dossiers {@code DIM-1} et {@code DIM1}.
-    * Un serveur, lui, en fait des mondes separes, et il essaie donc de
-    * convertir le dossier au chargement. Quand cette conversion echoue, le
-    * serveur refuse le monde entier — c'est le « Failed to migrate legacy
-    * world » qu'on voit dans la console.
-    *
-    * <p>Pour les cartes qui nous interessent — un lobby, un parkour — ces deux
-    * dossiers ne contiennent aucun terrain, seulement quelques fichiers de
-    * comptabilite vides : le Nether et l'End n'y ont jamais ete visites. On
-    * les met donc de cote, et le monde se charge comme un monde ordinaire.
-    *
-    * <p>Rien n'est supprime : tout part dans un dossier voisin, au cas ou.
+    * Met de cote les dossiers DIM-1 et DIM1 d'une carte faite en solo. Ils ne
+    * contiennent aucun terrain dans nos cartes, et l'importation n'en a pas
+    * besoin pour un monde de surface.
     */
    private void prepare(Zone zone) {
-      File folder = new File(Bukkit.getWorldContainer(), zone.world);
-
-      if (!new File(folder, "level.dat").exists()) {
-         return;
-      }
-
+      File folder = this.legacyFolder(zone);
       File aside = new File(Bukkit.getWorldContainer(), zone.world + "_dimensions-mises-de-cote");
-      int moved = 0;
 
       for (String name : new String[]{"DIM-1", "DIM1"}) {
          File dim = new File(folder, name);
 
-         if (!dim.isDirectory()) {
-            continue;
-         }
+         if (dim.isDirectory()) {
+            aside.mkdirs();
 
-         if (!aside.exists() && !aside.mkdirs()) {
-            this.pl.getLogger().warning("Impossible de creer " + aside.getName() + " : enleve " + name + " a la main par FileZilla.");
-            return;
-         }
-
-         File target = new File(aside, name + "-" + System.currentTimeMillis());
-
-         if (dim.renameTo(target)) {
-            moved++;
-         } else {
-            this.pl.getLogger().warning(
-               "Impossible de deplacer " + zone.world + "/" + name + " : supprime ce dossier a la main par FileZilla, il est vide."
-            );
-         }
-      }
-
-      // Une conversion ratee laisse parfois des mondes voisins incomplets, qui
-      // font echouer la suivante : on les ecarte aussi.
-      for (String suffix : new String[]{"_nether", "_the_end"}) {
-         File leftover = new File(Bukkit.getWorldContainer(), zone.world + suffix);
-
-         if (leftover.isDirectory() && !new File(leftover, "level.dat").exists()) {
-            if (leftover.renameTo(new File(Bukkit.getWorldContainer(), zone.world + suffix + "-rate-" + System.currentTimeMillis()))) {
-               moved++;
+            if (!dim.renameTo(new File(aside, name + "-" + System.currentTimeMillis()))) {
+               this.pl.getLogger().warning("Impossible de deplacer " + zone.world + "/" + name + " : supprime-le par FileZilla, il est vide.");
             }
          }
       }
+   }
 
-      if (moved > 0) {
-         this.pl.getLogger().info(zone.world + " : " + moved + " dossier(s) de dimension mis de cote, le monde peut etre charge.");
+   /**
+    * Remet en etat une importation ratee, pour que la suivante reparte de zero.
+    *
+    * <p>Les fichiers que la tentative ratee avait deja deplaces sont ramenes
+    * dans la carte d'origine. Ceux qui existent des deux cotes — par exemple
+    * un monde vide cree par erreur sous le meme nom — sont mis de cote : on
+    * garde toujours la version de la carte deposee. Rien n'est supprime.
+    *
+    * @return le nombre de fichiers ramenes dans la carte
+    */
+   private int repairFailedImport(Zone zone) throws java.io.IOException {
+      java.nio.file.Path aside = Bukkit.getWorldContainer().toPath().resolve(zone.world + "_import-rate-" + System.currentTimeMillis());
+      MapRepair.Result result = MapRepair.repair(this.legacyFolder(zone).toPath(), this.dimensionPath(zone.world), aside);
+
+      if (result == null) {
+         return 0;
       }
+
+      this.pl.getLogger().info(
+         "Importation ratee de " + zone.world + " reparee : " + result.restored() + " fichier(s) ramene(s) dans la carte, "
+            + result.duplicates() + " doublon(s) mis de cote dans " + result.aside().getFileName() + "."
+      );
+      return result.restored();
    }
 
    /** Charge un monde en cours de partie, sans redemarrer. */
@@ -254,35 +313,54 @@ public final class Worlds implements Listener {
          return;
       }
 
-      // L'erreur classique : decompresser l'archive cree un dossier de plus, et
-      // le monde se retrouve dans bdeimt_hub/Empty/ au lieu de bdeimt_hub/.
-      // On remet ca a plat tout seul plutot que d'afficher « monde absent ».
-      this.unnest(zone);
-      this.prepare(zone);
+      if (!this.enabled(zone)) {
+         this.pl.getLogger().info(zone.shortLabel() + " ferme dans config.yml : son monde n'est pas charge.");
+         return;
+      }
 
-      File folder = new File(Bukkit.getWorldContainer(), zone.world);
-      if (!new File(folder, "level.dat").exists()) {
+      this.unnest(zone);
+      boolean legacy = this.hasLegacyMap(zone);
+      boolean migrated = java.nio.file.Files.isDirectory(this.dimensionPath(zone.world));
+
+      if (!legacy && !migrated) {
          this.pl.getLogger().warning("Monde absent : " + zone.world + " — " + this.diagnose(zone));
          return;
       }
 
+      if (legacy) {
+         this.prepare(zone);
+
+         // Paper ne supprime l'ancien dossier qu'une fois l'importation
+         // reussie : s'il est encore la ET que le nouveau existe deja, c'est
+         // qu'une tentative a echoue a mi-chemin.
+         if (migrated) {
+            try {
+               this.repairFailedImport(zone);
+            } catch (Throwable t) {
+               this.pl.getLogger().warning("Reparation de " + zone.world + " impossible : " + t);
+            }
+         }
+
+         this.pl.getLogger().info("Importation de la carte " + zone.world + " au format de Paper 26 (une seule fois, patiente)...");
+      }
+
       try {
-         World w = Bukkit.createWorld(new WorldCreator(zone.world));
+         // Un generateur vide : autour de la carte, le vide plutot qu'un
+         // terrain genere au hasard.
+         World w = Bukkit.createWorld(new WorldCreator(zone.world).generator(new Skyblock.VoidGenerator()).generateStructures(false));
+
          if (w == null) {
-            this.pl.getLogger().warning("Monde " + zone.world + " illisible.");
+            this.pl.getLogger().warning("Monde " + zone.world + " : le serveur n'a rien renvoye.");
          } else {
-            this.pl.getLogger().info("Monde charge : " + zone.world);
+            this.pl.getLogger().info("Monde charge : " + zone.world + " (" + shown(w.getWorldPath()) + ")");
             this.tune(zone);
          }
       } catch (Throwable t) {
-         this.pl.getLogger().warning("Monde " + zone.world + " refuse par le serveur : " + t);
+         this.pl.getLogger().warning("Monde " + zone.world + " refuse par le serveur.");
 
-         for (StackTraceElement line : t.getStackTrace()) {
-            this.pl.getLogger().warning("   " + line);
-
-            if (line.toString().contains("fr.bdeimt")) {
-               break;
-            }
+         // La cause utile est souvent deux ou trois crans plus bas.
+         for (Throwable cause = t; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
+            this.pl.getLogger().warning("   cause : " + cause);
          }
       }
    }
@@ -561,6 +639,7 @@ public final class Worlds implements Listener {
       }
 
       this.pl.tab().refresh(p);
+      this.pl.skins().applyToAdmin(p);
    }
 
    // ------------------------------------------------------------ protection

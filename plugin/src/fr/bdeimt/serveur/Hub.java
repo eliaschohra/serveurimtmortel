@@ -164,11 +164,25 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
 
    @EventHandler(ignoreCancelled = true)
    public void onMove(PlayerMoveEvent e) {
+      Player p = e.getPlayer();
+
+      // Sous la carte du lobby : on remonte au point d'arrivee. Les degats y
+      // sont coupes, donc sans ca on tomberait dans le vide indefiniment.
+      if (e.getTo().getY() < e.getTo().getWorld().getMinHeight() - 5 && this.pl.worlds().zoneOf(p) == Zone.HUB) {
+         Location back = this.pl.auth().isLogged(p) ? this.pl.worlds().spawnOf(Zone.HUB, p) : this.pl.lobby().loginSpawn();
+
+         if (back != null) {
+            p.setFallDistance(0.0F);
+            p.teleport(back);
+         }
+
+         return;
+      }
+
       if (this.portals.isEmpty() || e.getTo().getBlockX() == e.getFrom().getBlockX() && e.getTo().getBlockZ() == e.getFrom().getBlockZ() && e.getTo().getBlockY() == e.getFrom().getBlockY()) {
          return;
       }
 
-      Player p = e.getPlayer();
       if (!this.pl.auth().isLogged(p)) {
          return;
       }
@@ -208,7 +222,7 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
       this.hologram(
          spawn.clone().add(0.0, 3.2, 0.0),
          1.5F,
-         "<gradient:#4FC3FF:#B66BFF:#FF5FAE><bold>✦ Hub du BDE de l'IMT ✦</bold></gradient>\n"
+         "<gradient:#4FC3FF:#B66BFF:#FF5FAE><bold>✦ Lobby du BDE de l'IMT ✦</bold></gradient>\n"
             + "<#E8E8E8>Clic droit sur la <#4FC3FF>boussole</#4FC3FF> pour choisir ton mode de jeu.</#E8E8E8>"
       );
    }

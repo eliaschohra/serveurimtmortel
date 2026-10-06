@@ -441,7 +441,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
       Player p = (Player)sender;
       if (this.pl.worlds().zoneOf(p) != Zone.HUB) {
-         Msg.err(sender, "Les PNJ vivent dans le hub : place-toi la-bas d'abord.");
+         Msg.err(sender, "Les PNJ vivent dans le lobby : place-toi la-bas d'abord.");
          return;
       }
 
@@ -453,8 +453,20 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
    private static Zone parseZone(String name) {
       String wanted = name.toLowerCase(Locale.ROOT);
 
+      // Le nom technique d'abord : depuis que le hub du skyblock s'affiche
+      // « Skyblock », le nom affiche ne suffit plus a distinguer les deux.
       for (Zone zone : Zone.values()) {
-         if (zone.name().toLowerCase(Locale.ROOT).equals(wanted) || zone.shortLabel().toLowerCase(Locale.ROOT).equals(wanted)) {
+         if (zone.name().toLowerCase(Locale.ROOT).equals(wanted)) {
+            return zone;
+         }
+      }
+
+      if (wanted.equals("lobby")) {
+         return Zone.HUB;
+      }
+
+      for (Zone zone : Zone.values()) {
+         if (zone.shortLabel().toLowerCase(Locale.ROOT).equals(wanted)) {
             return zone;
          }
       }

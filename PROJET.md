@@ -241,6 +241,42 @@ les reproduire.
   `GameRule.values()` et on compare les noms plutôt que d'utiliser les constantes.
 - **D'où `BinCheck`** : aucune livraison sans 0 problème sur les deux versions.
 
+### Paper 26 range les mondes autrement — le piège le plus coûteux
+
+Depuis Minecraft 26, un serveur ne range plus chaque monde dans son propre
+dossier à la racine. Tous les mondes sont des **dimensions** du monde
+principal :
+
+```
+world/dimensions/minecraft/overworld/     la survie
+world/dimensions/minecraft/bdeimt_hub/    le lobby
+```
+
+Une carte déposée à l'ancienne (`bdeimt_hub/` à la racine, avec son
+`level.dat`) est **importée** par Paper au premier `createWorld` : il déplace
+ses dossiers `region/`, `entities/`, `poi/` **fichier par fichier** vers la
+nouvelle dimension, puis supprime l'ancien dossier. Code côté Paper :
+`io.papermc.paper.world.migration.LegacyCraftBukkitWorldMigration`.
+
+Si une importation échoue à mi-chemin, la carte reste coupée en deux, et
+**toutes** les tentatives suivantes s'arrêtent sur « Refusing to overwrite
+existing migrated file », qui remonte en « Failed to migrate legacy world ».
+C'est ce qui a bloqué le lobby et le parkour pendant des heures.
+
+`MapRepair` recolle les morceaux avant chaque importation : ce qui avait été
+déplacé revient dans la carte, les doublons partent de côté, rien n'est
+supprimé. Il est éprouvé sur une copie de la vraie carte du lobby par
+`build/tests/run-repair-test.sh` — à relancer après toute modification.
+
+Conséquences pratiques :
+
+- après une importation réussie, le dossier `bdeimt_hub/` **disparaît** de la
+  racine : c'est normal, la carte vit désormais dans `world/dimensions/` ;
+- pour savoir où Paper range une dimension, lire `World#getWorldPath()` d'un
+  monde déjà chargé plutôt que deviner (`Worlds.dimensionPath`) ;
+- Multiverse doit se charger **après** nous (`loadbefore`), pour ne pas lancer
+  sa propre importation avant notre réparation.
+
 ### Les univers séparés
 
 - **L'inventaire à la reconnexion.** Minecraft rend au joueur l'inventaire du

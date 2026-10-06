@@ -74,14 +74,14 @@ public final class Tab {
             detail.append("<dark_gray> | </dark_gray>");
          }
 
-         detail.append("<#8899AA>Hub</#8899AA> <white>").append(lobby).append("</white>");
+         detail.append("<#4FC3FF>Lobby</#4FC3FF> <white>").append(lobby).append("</white>");
       }
 
       Component header = Msg.mm(
          "\n<gradient:#4FC3FF:#B66BFF:#FF5FAE><bold>  Serveur du BDE de l'IMT  </bold></gradient>\n"
             + "<gray>imtmortel.com</gray>   <dark_gray>·</dark_gray>   <white>" + total + "</white> <gray>en ligne</gray>\n"
       );
-      Component footer = Msg.mm("\n" + detail + "\n<dark_gray>/hub ou la boussole pour changer de monde</dark_gray>\n");
+      Component footer = Msg.mm("\n" + detail + "\n<dark_gray>/hub ou la boussole du lobby pour changer de monde</dark_gray>\n");
 
       for (Player p : Bukkit.getOnlinePlayers()) {
          if (this.pl.auth().isLogged(p)) {
