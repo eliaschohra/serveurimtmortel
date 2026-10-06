@@ -145,6 +145,9 @@ commands:
     description: Le parkour du mois, son classement
     usage: /parkour [recommencer]
     aliases: [pk]
+  musique:
+    description: Couper ou remettre la musique du lobby
+    aliases: [music]
   hub:
     description: Revenir au hub pour changer de monde
     aliases: [lobby, modes]

@@ -300,6 +300,98 @@ public final class Lobby implements Listener {
       this.buildImageWall();
    }
 
+   /** L'hologramme geant du /login, montre aux seuls joueurs pas encore identifies. */
+   private TextDisplay loginHolo;
+
+   /**
+    * Habille le lobby pour la connexion : la photo du BDE et un hologramme
+    * geant flottant au loin dans le ciel, face au point d'arrivee.
+    *
+    * <p>La photo reste visible par tous, c'est la vitrine du serveur.
+    * L'hologramme du /login, lui, n'est montre qu'a ceux qui ne sont pas
+    * encore identifies.
+    */
+   public void decorateHub() {
+      World hub = this.pl.worlds().world(Zone.HUB);
+
+      if (hub == null || !this.pl.worlds().available(Zone.HUB)) {
+         return;
+      }
+
+      for (Entity var2 : hub.getEntities()) {
+         if (var2.getPersistentDataContainer().has(this.tag, PersistentDataType.BYTE)) {
+            var2.remove();
+         }
+      }
+
+      Location var3 = this.pl.worlds().spawnOf(Zone.HUB, null);
+
+      if (var3 == null || var3.getWorld() == null) {
+         return;
+      }
+
+      // Devant le point d'arrivee, dans le sens du regard.
+      double var4 = Math.toRadians(var3.getYaw());
+      double var6 = -Math.sin(var4);
+      double var8 = Math.cos(var4);
+      BlockFace var10 = Math.abs(var6) > Math.abs(var8) ? (var6 > 0.0 ? BlockFace.WEST : BlockFace.EAST) : (var8 > 0.0 ? BlockFace.NORTH : BlockFace.SOUTH);
+
+      Location var11 = Util.loc(this.pl.getConfig().getString("lobby.photo.position"));
+      BlockFace var12 = var10;
+
+      try {
+         var12 = BlockFace.valueOf(this.pl.getConfig().getString("lobby.photo.face", var10.name()));
+      } catch (IllegalArgumentException var18) {
+      }
+
+      if (var11 == null || var11.getWorld() != hub) {
+         var11 = var3.clone().add(var6 * 30.0, 16.0, var8 * 30.0);
+      }
+
+      this.buildImageWall(var11, var12);
+
+      Location var13 = var3.clone().add(var6 * 22.0, 8.0, var8 * 22.0);
+      this.loginHolo = hub.spawn(var13, TextDisplay.class, var1x -> {
+         var1x.text(
+            Msg.mm(
+               "<gradient:#4FC3FF:#B66BFF:#FF5FAE><bold>BDE IMT Atlantique</bold></gradient>\n"
+                  + "<white>Bienvenue sur le serveur !</white>\n \n"
+                  + "<#FFD25E>Première fois ?</#FFD25E> <#55FF88>/register</#55FF88> <gray>‹mdp› ‹mdp›</gray>\n"
+                  + "<#4FC3FF>Déjà venu ?</#4FC3FF> <#4FC3FF>/login</#4FC3FF> <gray>‹mdp›</gray>"
+            )
+         );
+         var1x.setBillboard(Billboard.CENTER);
+         var1x.setAlignment(TextAlignment.CENTER);
+         var1x.setLineWidth(300);
+         var1x.setShadowed(true);
+         var1x.setBackgroundColor(Color.fromARGB(140, 10, 10, 30));
+         var1x.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(4.0F, 4.0F, 4.0F), new AxisAngle4f()));
+         var1x.setViewRange(4.0F);
+         var1x.setVisibleByDefault(false);
+         var1x.setPersistent(false);
+         var1x.getPersistentDataContainer().set(this.tag, PersistentDataType.BYTE, (byte)1);
+      });
+
+      for (Player var15 : Bukkit.getOnlinePlayers()) {
+         if (!this.pl.auth().isLogged(var15)) {
+            var15.showEntity(this.pl, this.loginHolo);
+         }
+      }
+   }
+
+   /** Montre ou cache l'hologramme du /login a un joueur. */
+   public void showLoginHolo(Player var1, boolean var2) {
+      if (this.loginHolo == null || !this.loginHolo.isValid()) {
+         return;
+      }
+
+      if (var2) {
+         var1.showEntity(this.pl, this.loginHolo);
+      } else {
+         var1.hideEntity(this.pl, this.loginHolo);
+      }
+   }
+
    private void text(Location var1, float var2, String var3) {
       this.world.spawn(var1, TextDisplay.class, var3x -> {
          var3x.text(Msg.mm(var3));
@@ -331,6 +423,18 @@ public final class Lobby implements Listener {
    }
 
    private void buildImageWall() {
+      // L'ile de secours : mur au nord de l'ile, images tournees vers le sud.
+      this.buildImageWall(new Location(this.world, 0.0, 107.0, -20.0), BlockFace.SOUTH);
+   }
+
+   /**
+    * Le mur de la photo du BDE, en cartes accrochees dans des cadres.
+    *
+    * @param base   le bas du mur, au milieu, a l'emplacement des cadres
+    * @param facing le cote vers lequel les images regardent : celui du public
+    */
+   public void buildImageWall(Location base, BlockFace facing) {
+      World wallWorld = base.getWorld();
       File var1 = this.findImage("BDEIMT.png");
       if (var1 == null) {
          this.pl.getLogger().warning("Image du lobby absente : depose BDEIMT.png dans plugins/BDEIMT/images puis /imt reload");
@@ -392,7 +496,7 @@ public final class Lobby implements Listener {
                   }
 
                   if (var25 == null) {
-                     var25 = Bukkit.createMap(this.world);
+                     var25 = Bukkit.createMap(wallWorld);
                      if (var21 < var18.size()) {
                         var18.set(var21, var25.getId());
                      } else {
@@ -412,12 +516,23 @@ public final class Lobby implements Listener {
                   MapMeta var39 = (MapMeta)var38.getItemMeta();
                   var39.setMapView(var25);
                   var38.setItemMeta(var39);
-                  int var28 = var19 + var23;
-                  int var29 = 107 + (var6 - 1 - var22);
-                  this.world.getBlockAt(var28, var29, -21).setType(Material.BARRIER, false);
-                  Location var30 = new Location(this.world, var28, var29, -20.0);
-                  this.world.spawn(var30, GlowItemFrame.class, var2x -> {
-                     var2x.setFacingDirection(BlockFace.SOUTH, true);
+                  // A droite du spectateur : (Fz, 0, -Fx) quand les images regardent F.
+                  int var40 = facing.getModZ();
+                  int var41 = -facing.getModX();
+                  int var42 = var19 + var23;
+                  int var28 = base.getBlockX() + var40 * var42;
+                  int var43 = base.getBlockZ() + var41 * var42;
+                  int var29 = base.getBlockY() + (var6 - 1 - var22);
+                  Block var44 = wallWorld.getBlockAt(var28 - facing.getModX(), var29, var43 - facing.getModZ());
+
+                  // Un support invisible derriere chaque cadre, sauf s'il y a
+                  // deja un vrai bloc : on accroche alors la photo au mur.
+                  if (var44.getType().isAir()) {
+                     var44.setType(Material.BARRIER, false);
+                  }
+                  Location var30 = new Location(wallWorld, var28, var29, var43);
+                  wallWorld.spawn(var30, GlowItemFrame.class, var2x -> {
+                     var2x.setFacingDirection(facing, true);
                      var2x.setItem(var38, false);
                      var2x.setVisible(false);
                      var2x.setFixed(true);
@@ -474,6 +589,7 @@ public final class Lobby implements Listener {
       var1.teleport(this.loginSpawn());
       var1.setGameMode(GameMode.ADVENTURE);
       this.freeze(var1);
+      this.showLoginHolo(var1, true);
 
       try {
          var1.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
@@ -487,6 +603,7 @@ public final class Lobby implements Listener {
    }
 
    public void leave(Player var1, Location var2, Runnable var3) {
+      this.showLoginHolo(var1, false);
       var1.setWalkSpeed(0.2F);
       var1.setFlySpeed(0.1F);
       var1.setFallDistance(0.0F);

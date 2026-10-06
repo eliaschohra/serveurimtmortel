@@ -250,6 +250,7 @@ public final class BDEIMT extends JavaPlugin {
          return back != null && this.worlds.zoneOf(back.getWorld()) == Zone.SURVIE ? back : this.survivalSpawn();
       });
       this.hub.decorate();
+      this.lobby.decorateHub();
       this.npcs.spawnAll();
       this.skins.syncAll();
       this.parkour.refreshHologram();
@@ -308,6 +309,7 @@ public final class BDEIMT extends JavaPlugin {
       this.cmd("listes", this.kits, null);
       this.cmd("liste", this.lists, this.lists);
       this.cmd("hub", this.hub, null);
+      this.cmd("musique", this.hub, null);
       this.cmd("parkour", this.parkour, this.parkour);
       this.cmd("parcelle", this.plots, this.plots);
       this.cmd("ile", this.skyblock, this.skyblock);
@@ -337,6 +339,7 @@ public final class BDEIMT extends JavaPlugin {
          this.fly.tick();
          this.graves.tick();
          this.tab.tick();
+         this.hub.musicTick();
          this.parkour.tick();
          this.plots.tick();
       }, 20L, 20L);
@@ -348,6 +351,8 @@ public final class BDEIMT extends JavaPlugin {
       // Le ble repousse toutes les 20 minutes, les betes toutes les 30,
       // et les filons de la mine se reforment chaque heure.
       Bukkit.getScheduler().runTaskTimer(this, this.npcs::watch, 200L, 200L);
+      Bukkit.getScheduler().runTaskTimer(this, this.hub::particles, 40L, 3L);
+      Bukkit.getScheduler().runTaskTimer(this, this.hub::refreshTitles, 100L, 100L);
       Bukkit.getScheduler().runTaskTimer(this, this.skyhub::regrowFarm, 24000L, 24000L);
       Bukkit.getScheduler().runTaskTimer(this, this.skyhub::restock, 36000L, 36000L);
       Bukkit.getScheduler().runTaskTimer(this, this.skyhub::regrowVeins, 72000L, 72000L);

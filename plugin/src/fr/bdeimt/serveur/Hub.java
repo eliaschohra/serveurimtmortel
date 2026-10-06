@@ -112,6 +112,11 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
          return true;
       }
 
+      if (command.getName().equalsIgnoreCase("musique")) {
+         this.toggleMusic(p);
+         return true;
+      }
+
       // Si la carte du hub n'a pas ete deposee sur le serveur, on ouvre quand
       // meme le menu : sinon on serait prisonnier de la survie, sans aucun
       // moyen d'atteindre le skyblock ou les parcelles.
@@ -158,7 +163,9 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
 
    /** Ajoute un portail a l'endroit ou se trouve le staff. */
    public void addPortal(Zone zone, Location at, double radius) {
-      this.portals.add(new Hub.Portal(zone, at, radius));
+      Hub.Portal portal = new Hub.Portal(zone, at, radius);
+      this.portals.add(portal);
+      this.portalTitle(portal);
       List<String> lines = new ArrayList<>(this.pl.getConfig().getStringList("portails"));
       lines.add(zone.name() + "@" + Util.loc(at) + "|" + radius);
       this.pl.getConfig().set("portails", lines);
@@ -168,6 +175,14 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
    public int clearPortals(World world) {
       int before = this.portals.size();
       this.portals.removeIf(portal -> portal.at().getWorld() != null && portal.at().getWorld().equals(world));
+      this.portalTitles.entrySet().removeIf(entry -> {
+         if (entry.getKey().at().getWorld() != null && entry.getKey().at().getWorld().equals(world)) {
+            entry.getValue().remove();
+            return true;
+         }
+
+         return false;
+      });
       List<String> lines = new ArrayList<>();
 
       for (Hub.Portal portal : this.portals) {
@@ -218,9 +233,16 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
 
    // ----------------------------------------------------------- hologrammes
 
-   /** Pose ou replace un hologramme du hub (panneaux d'accueil). */
+   /** Les titres poses au-dessus de chaque portail, pour mettre a jour leur compteur. */
+   private final java.util.Map<Hub.Portal, TextDisplay> portalTitles = new java.util.HashMap<>();
+
+   /**
+    * Pose les hologrammes du lobby : la presentation du serveur a l'entree,
+    * et le titre de chaque mode au-dessus de son portail.
+    */
    public void decorate() {
       World w = this.pl.worlds().world(Zone.HUB);
+
       if (w == null) {
          return;
       }
@@ -231,17 +253,207 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
          }
       }
 
+      this.portalTitles.clear();
       Location spawn = this.pl.worlds().spawnOf(Zone.HUB, null);
+
       if (spawn == null) {
          return;
       }
 
+      double yaw = Math.toRadians(spawn.getYaw());
+      double dx = -Math.sin(yaw);
+      double dz = Math.cos(yaw);
+
+      // La presentation, quelques pas devant le point d'arrivee.
       this.hologram(
-         spawn.clone().add(0.0, 3.2, 0.0),
-         1.5F,
+         spawn.clone().add(dx * 6.0, 2.8, dz * 6.0),
+         1.6F,
          "<gradient:#4FC3FF:#B66BFF:#FF5FAE><bold>✦ Lobby du BDE de l'IMT ✦</bold></gradient>\n"
-            + "<#E8E8E8>Clic droit sur la <#4FC3FF>boussole</#4FC3FF> pour choisir ton mode de jeu.</#E8E8E8>"
+            + "<#E8E8E8>Le serveur des étudiants d'IMT Atlantique</#E8E8E8>\n \n"
+            + "<#55FF88>Survie</#55FF88> <dark_gray>·</dark_gray> <#FFD25E>Parkour du mois</#FFD25E> <dark_gray>·</dark_gray> "
+            + "<#C48BFF>Parcelles créatives</#C48BFF> <dark_gray>·</dark_gray> <#7FE3FF>Skyblock</#7FE3FF>\n \n"
+            + "<white>Avance jusqu'aux portails, ou clic droit sur la</white> <#4FC3FF>boussole</#4FC3FF><white>.</white>\n"
+            + "<gray>/guide pour tout savoir  ·  /hub pour revenir ici</gray>"
       );
+
+      for (Hub.Portal portal : this.portals) {
+         if (portal.at().getWorld() != null && portal.at().getWorld().equals(w)) {
+            this.portalTitle(portal);
+         }
+      }
+   }
+
+   /** Le titre d'un mode, au-dessus de son portail. */
+   private void portalTitle(Hub.Portal portal) {
+      World w = portal.at().getWorld();
+
+      if (w == null) {
+         return;
+      }
+
+      Location at = portal.at().clone().add(0.0, portal.radius() + 2.4, 0.0);
+      TextDisplay display = w.spawn(at, TextDisplay.class, d -> {
+         d.text(Msg.mm(this.portalText(portal.zone())));
+         d.setBillboard(Billboard.CENTER);
+         d.setAlignment(TextAlignment.CENTER);
+         d.setLineWidth(260);
+         d.setShadowed(true);
+         d.setBackgroundColor(Color.fromARGB(120, 10, 10, 25));
+         d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.8F, 1.8F, 1.8F), new AxisAngle4f()));
+         d.setPersistent(false);
+         d.getPersistentDataContainer().set(this.holoKey, PersistentDataType.BYTE, (byte)1);
+      });
+      this.portalTitles.put(portal, display);
+   }
+
+   private String portalText(Zone zone) {
+      String name = zone == Zone.SKYHUB || zone == Zone.SKYBLOCK ? "Skyblock" : zone.shortLabel();
+      String what = switch (zone) {
+         case SURVIE -> "La survie du serveur";
+         case PARKOUR -> "Le parkour du mois : " + this.pl.parkour().mapName();
+         case PARCELLES -> "Ta parcelle en créatif";
+         case SKYHUB, SKYBLOCK -> "Ton île dans le ciel";
+         default -> "";
+      };
+
+      if (!this.pl.worlds().available(zone)) {
+         return "<dark_gray><bold>" + name + "</bold></dark_gray>\n<#FFD25E>Bientôt disponible</#FFD25E>";
+      }
+
+      return zone.color + "<bold>" + name + "</bold>\n<gray>" + what + "</gray>\n<white>" + this.pl.worlds().count(zone) + "</white> <gray>joueur(s)</gray>";
+   }
+
+   // ------------------------------------------------------- vie du lobby
+
+   private long ticks;
+
+   /**
+    * Toutes les trois ticks : une colonne de particules arc-en-ciel tourne au
+    * centre de chaque portail, pour qu'on les repere de loin. Seulement quand
+    * quelqu'un est assez pres pour la voir.
+    */
+   public void particles() {
+      this.ticks += 3;
+
+      for (Hub.Portal portal : this.portals) {
+         Location at = portal.at();
+         World w = at.getWorld();
+
+         if (w == null || w.getPlayers().isEmpty()) {
+            continue;
+         }
+
+         boolean seen = false;
+
+         for (Player p : w.getPlayers()) {
+            if (p.getLocation().distanceSquared(at) < 2304.0) {
+               seen = true;
+               break;
+            }
+         }
+
+         if (!seen) {
+            continue;
+         }
+
+         double radius = Math.max(0.6, portal.radius() * 0.55);
+
+         for (int i = 0; i < 10; i++) {
+            double height = (i * 0.45 + this.ticks * 0.06) % 4.5;
+            double angle = this.ticks * 0.25 + i * 0.63;
+            float hue = (float)((this.ticks * 0.01 + i / 10.0) % 1.0);
+            int rgb = java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
+            org.bukkit.Color color = org.bukkit.Color.fromRGB(rgb & 0xFFFFFF);
+            Location point = at.clone().add(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+            w.spawnParticle(org.bukkit.Particle.DUST, point, 1, 0.0, 0.0, 0.0, 0.0, new org.bukkit.Particle.DustOptions(color, 1.3F));
+         }
+      }
+   }
+
+   /** Toutes les cinq secondes : le nombre de joueurs sous chaque titre de portail. */
+   public void refreshTitles() {
+      for (java.util.Map.Entry<Hub.Portal, TextDisplay> entry : this.portalTitles.entrySet()) {
+         if (entry.getValue().isValid()) {
+            entry.getValue().text(Msg.mm(this.portalText(entry.getKey().zone())));
+         }
+      }
+   }
+
+   // ------------------------------------------------------------ musique
+
+   /** Disques doux de Minecraft, et leur duree en secondes. */
+   private static final String[][] PLAYLIST = new String[][]{
+      {"music_disc.creator_music_box", "73"},
+      {"music_disc.cat", "185"},
+      {"music_disc.far", "174"},
+      {"music_disc.wait", "238"},
+      {"music_disc.strad", "188"},
+      {"music_disc.relic", "218"}
+   };
+   private final java.util.Map<java.util.UUID, long[]> music = new java.util.concurrent.ConcurrentHashMap<>();
+   private final java.util.Set<java.util.UUID> musicOff = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+   /**
+    * Chaque seconde : un fond musical doux dans le lobby, un disque apres
+    * l'autre, comme un juke-box. Le son suit le joueur. On le coupe en
+    * quittant le lobby, ou pour de bon avec /musique.
+    */
+   public void musicTick() {
+      long now = System.currentTimeMillis();
+
+      for (Player p : Bukkit.getOnlinePlayers()) {
+         java.util.UUID id = p.getUniqueId();
+         boolean here = this.pl.worlds().zoneOf(p) == Zone.HUB && !this.musicOff.contains(id);
+         long[] state = this.music.get(id);
+
+         if (!here) {
+            if (state != null) {
+               this.music.remove(id);
+               this.stopMusic(p);
+            }
+
+            continue;
+         }
+
+         if (state != null && now < state[1]) {
+            continue;
+         }
+
+         int index = state == null ? java.util.concurrent.ThreadLocalRandom.current().nextInt(PLAYLIST.length) : (int)((state[0] + 1) % PLAYLIST.length);
+         String[] track = PLAYLIST[index];
+
+         try {
+            p.playSound(
+               net.kyori.adventure.sound.Sound.sound(
+                  net.kyori.adventure.key.Key.key(track[0]), net.kyori.adventure.sound.Sound.Source.RECORD, 0.45F, 1.0F
+               ),
+               net.kyori.adventure.sound.Sound.Emitter.self()
+            );
+         } catch (Throwable t) {
+         }
+
+         // Quelques secondes de silence entre deux morceaux.
+         this.music.put(id, new long[]{index, now + (Long.parseLong(track[1]) + 6L) * 1000L});
+      }
+   }
+
+   private void stopMusic(Player p) {
+      try {
+         p.stopSound(net.kyori.adventure.sound.SoundStop.source(net.kyori.adventure.sound.Sound.Source.RECORD));
+      } catch (Throwable t) {
+      }
+   }
+
+   /** {@code /musique} : couper ou remettre la musique du lobby. */
+   public void toggleMusic(Player p) {
+      if (this.musicOff.remove(p.getUniqueId())) {
+         Msg.ok(p, "Musique du lobby remise.");
+      } else {
+         this.musicOff.add(p.getUniqueId());
+         this.music.remove(p.getUniqueId());
+         this.stopMusic(p);
+         Msg.ok(p, "Musique du lobby coupée. <gray>(/musique pour la remettre)</gray>");
+      }
    }
 
    private void hologram(Location at, float scale, String text) {

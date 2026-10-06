@@ -50,6 +50,9 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "pnj":
                this.pnj(var1, var4);
                break;
+            case "photo":
+               this.photo(var1);
+               break;
             case "resetmdp":
                if (var4.length < 2) {
                   Msg.err(var1, "/imt resetmdp ‹pseudo›");
@@ -327,6 +330,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
             if (wanted == Zone.HUB) {
                this.pl.hub().decorate();
+               this.pl.lobby().decorateHub();
                this.pl.npcs().spawnAll();
             } else if (wanted == Zone.PARKOUR) {
                this.pl.parkour().refreshHologram();
@@ -451,6 +455,39 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       Msg.ok(sender, "<white>" + id + "</white> est pose ici.");
    }
 
+   /**
+    * {@code /imt photo} : accroche la photo du BDE la ou regarde l'admin.
+    * Sur un mur, elle s'y accroche ; dans le vide, un support invisible est
+    * pose derriere elle.
+    */
+   private void photo(CommandSender sender) {
+      if (Msg.noConsole(sender)) {
+         return;
+      }
+
+      Player p = (Player)sender;
+
+      if (this.pl.worlds().zoneOf(p) != Zone.HUB) {
+         Msg.err(p, "La photo s'accroche dans le lobby : place-toi la-bas d'abord.");
+         return;
+      }
+
+      org.bukkit.block.Block target = p.getTargetBlockExact(80);
+      org.bukkit.block.BlockFace face = p.getTargetBlockFace(80);
+
+      if (target == null || face == null || face.getModY() != 0) {
+         Msg.err(p, "Vise un mur (ou un bloc) a moins de 80 blocs : la photo se pose sur sa face visible.");
+         return;
+      }
+
+      org.bukkit.Location base = target.getRelative(face).getLocation();
+      this.pl.getConfig().set("lobby.photo.position", Util.loc(base));
+      this.pl.getConfig().set("lobby.photo.face", face.name());
+      this.pl.saveConfig();
+      this.pl.lobby().decorateHub();
+      Msg.ok(p, "Photo du BDE accrochee. <gray>(le bas du mur, au milieu, est la ou tu visais)</gray>");
+   }
+
    private static Zone parseZone(String name) {
       String wanted = name.toLowerCase(Locale.ROOT);
 
@@ -481,7 +518,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
          return var5;
       } else {
          if (var4.length == 1) {
-            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj"));
+            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo"));
          } else if (var4.length == 2) {
             String var10 = var4[0].toLowerCase(Locale.ROOT);
             switch (var10) {

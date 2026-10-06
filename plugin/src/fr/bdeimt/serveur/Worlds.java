@@ -767,7 +767,7 @@ public final class Worlds implements Listener {
    private static final java.util.Set<String> PARTOUT = java.util.Set.of(
       "register", "reg", "inscription", "login", "l", "log", "connexion", "changemdp", "changepassword",
       "msg", "m", "w", "tell", "r", "repondre", "ignore", "guide", "aide", "spawn", "hub", "lobby",
-      "panel", "mute", "unmute", "tempban", "ban", "unban", "kick", "imt", "maintenance", "moderateur",
+      "panel", "mute", "unmute", "tempban", "ban", "unban", "kick", "imt", "maintenance", "moderateur", "musique", "music",
       "maudire", "help", "?"
    );
    /** Ce qui n'a de sens qu'en survie : les delires, les votes, les tombes. */
