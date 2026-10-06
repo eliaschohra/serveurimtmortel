@@ -81,7 +81,7 @@ public final class Tab {
          "\n<gradient:#4FC3FF:#B66BFF:#FF5FAE><bold>  Serveur du BDE de l'IMT  </bold></gradient>\n"
             + "<gray>imtmortel.com</gray>   <dark_gray>·</dark_gray>   <white>" + total + "</white> <gray>en ligne</gray>\n"
       );
-      Component footer = Msg.mm("\n" + detail + "\n<dark_gray>Boussole dans le hub pour changer de monde</dark_gray>\n");
+      Component footer = Msg.mm("\n" + detail + "\n<dark_gray>/hub ou la boussole pour changer de monde</dark_gray>\n");
 
       for (Player p : Bukkit.getOnlinePlayers()) {
          if (this.pl.auth().isLogged(p)) {

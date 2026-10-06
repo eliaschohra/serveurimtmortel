@@ -95,8 +95,12 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
          return true;
       }
 
-      if (this.pl.worlds().zoneOf(p) == Zone.HUB) {
+      // Si la carte du hub n'a pas ete deposee sur le serveur, on ouvre quand
+      // meme le menu : sinon on serait prisonnier de la survie, sans aucun
+      // moyen d'atteindre le skyblock ou les parcelles.
+      if (this.pl.worlds().zoneOf(p) == Zone.HUB || !this.pl.worlds().available(Zone.HUB)) {
          new Hub.Chooser(this.pl).open(p);
+         Util.sound(p, "ui.button.click", 0.5F, 1.6F);
       } else {
          this.pl.worlds().send(p, Zone.HUB);
       }
