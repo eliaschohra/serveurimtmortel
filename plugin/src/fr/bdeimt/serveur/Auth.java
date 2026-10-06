@@ -470,12 +470,12 @@ public final class Auth implements Listener, CommandExecutor {
          var1.setGameMode(var9);
 
          if (hub) {
-            // Le stuff de la survie est range avant d'entrer dans le hub.
-            this.pl.inventories().setCurrentGroup(var1, Zone.SURVIE.group);
+            // Le groupe d'origine a ete releve a la connexion : l'inventaire
+            // du monde quitte est range la ou il faut avant d'entrer au hub.
             this.pl.inventories().switchTo(var1, Zone.HUB.group);
             this.pl.worlds().arrive(var1, Zone.HUB);
          } else {
-            this.pl.inventories().setCurrentGroup(var1, Zone.SURVIE.group);
+            this.pl.inventories().switchTo(var1, Zone.SURVIE.group);
             this.pl.fly().onLogin(var1);
             this.pl.graves().onLogin(var1);
             this.pl.votes().onLogin(var1);
@@ -562,6 +562,7 @@ public final class Auth implements Listener, CommandExecutor {
          }
       }
 
+      this.pl.inventories().setCurrentGroup(var2, this.pl.worlds().zoneOf(var2).group);
       this.pl.lobby().enter(var2);
       Bukkit.getScheduler().runTaskLater(this.pl, () -> this.prompt(var2, true), 15L);
    }

@@ -330,6 +330,7 @@ public final class BDEIMT extends JavaPlugin {
       Bukkit.getScheduler().runTaskTimer(this, this.announcer::guideReminder, var6, var6);
       this.votes.updateSidebar();
       this.fixServerSettings();
+      new ThirdParty(this).run();
 
       for (Player var9 : Bukkit.getOnlinePlayers()) {
          var9.kick(Msg.mm("<#4FC3FF>Le serveur vient d'être mis à jour.</#4FC3FF>\n<gray>Reconnecte-toi !"));

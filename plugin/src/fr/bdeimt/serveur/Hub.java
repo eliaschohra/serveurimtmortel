@@ -269,12 +269,17 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
          this.fill();
       }
 
+      /** Le nom affiche dans le menu : « Skyblock » plutot que « Hub Skyblock ». */
+      private static String title(Zone zone) {
+         return zone == Zone.SKYHUB ? "Skyblock" : zone.shortLabel();
+      }
+
       private ItemStack open(Zone zone, int here) {
          return Util.item(
             icon(zone),
             1,
-            zone.color + "<bold>" + zone.shortLabel() + "</bold>",
-            "<gray>" + describe(zone) + "</gray>",
+            zone.color + "<bold>" + title(zone) + "</bold>",
+            "<gray>" + this.describe(zone) + "</gray>",
             " ",
             "<#55FF88>" + here + "</#55FF88> <gray>joueur(s) sur place</gray>",
             "<dark_gray>Clic pour y aller</dark_gray>"
@@ -285,8 +290,8 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
          return Util.item(
             Material.GRAY_DYE,
             1,
-            "<dark_gray><bold>" + zone.shortLabel() + "</bold></dark_gray>",
-            "<gray>" + describe(zone) + "</gray>",
+            "<dark_gray><bold>" + title(zone) + "</bold></dark_gray>",
+            "<gray>" + this.describe(zone) + "</gray>",
             " ",
             "<#FFD25E>Bientot disponible !</#FFD25E>"
          );
@@ -302,10 +307,10 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
          };
       }
 
-      private static String describe(Zone zone) {
+      private String describe(Zone zone) {
          return switch (zone) {
             case SURVIE -> "La survie du serveur, avec tout ce qu'on y a construit.";
-            case PARKOUR -> "Le parkour du mois : le Warden Parkour.";
+            case PARKOUR -> "Le parkour du mois : " + this.pl.parkour().mapName() + ".";
             case SKYHUB, SKYBLOCK -> "Ton ile, tes fermes, le marche commun.";
             case PARCELLES -> "Une parcelle en creatif, rien que pour toi.";
             default -> "";

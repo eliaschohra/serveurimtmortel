@@ -102,12 +102,15 @@ public final class Teleports implements CommandExecutor, TabCompleter, Listener 
             Msg.err(var1, "Tu ne peux pas t'envoyer une demande à toi-même.");
          } else if (this.pl.lobby().isLobby(var4.getWorld())) {
             Msg.err(var1, "Ce joueur n'est pas disponible.");
+         } else if (!this.pl.worlds().zoneOf(var4).group.equals(this.pl.worlds().zoneOf(var1).group)) {
+            Msg.err(var1, "<white><n></white> n'est pas dans le même monde que toi.", Msg.p("n", var4.getName()));
          } else {
             PlayerData var5 = this.pl.data().get(var4);
             if (!var5.tpaOff && !var5.ignores.contains(var1.getUniqueId())) {
                long var6 = System.currentTimeMillis();
                Long var8 = this.lastRequest.get(var1.getUniqueId());
-               if (var8 != null && var6 - var8 < 30000L && !this.pl.ranks().isStaff(var1)) {
+               boolean var20 = this.pl.lists().sameList(var1, var4);
+               if (var8 != null && var6 - var8 < 30000L && !var20 && !this.pl.ranks().isStaff(var1)) {
                   Msg.err(var1, "Attends <white><t></white> avant une nouvelle demande.", Msg.p("t", Util.duration(30000L - (var6 - var8))));
                } else {
                   this.lastRequest.put(var1.getUniqueId(), var6);
@@ -186,7 +189,8 @@ public final class Teleports implements CommandExecutor, TabCompleter, Listener 
             this.warmup(
                var6,
                () -> var7.isOnline() && !this.pl.lobby().isLobby(var7.getWorld()) ? var7.getLocation() : null,
-               "chez <white>" + var7.getName() + "</white>"
+               "chez <white>" + var7.getName() + "</white>",
+               this.pl.lists().sameList(var6, var7)
             );
          }
       }
@@ -347,6 +351,14 @@ public final class Teleports implements CommandExecutor, TabCompleter, Listener 
    }
 
    private void warmup(Player var1, Teleports.Dest var2, String var3) {
+      this.warmup(var1, var2, var3, false);
+   }
+
+   /**
+    * @param var10 vrai pour partir tout de suite, sans les trois secondes
+    *              d'attente : c'est le cas entre membres d'une meme liste.
+    */
+   private void warmup(Player var1, Teleports.Dest var2, String var3, boolean var10) {
       Long var4 = this.lastCombat.get(var1.getUniqueId());
       if (var4 != null && System.currentTimeMillis() - var4 < 15000L && !this.pl.ranks().isStaff(var1)) {
          Msg.err(var1, "Tu es en plein combat ! Attends <white><t></white>.", Msg.p("t", Util.duration(15000L - (System.currentTimeMillis() - var4))));
@@ -357,7 +369,7 @@ public final class Teleports implements CommandExecutor, TabCompleter, Listener 
          }
 
          Location var6 = var1.getLocation().clone();
-         boolean var7 = this.pl.ranks().isStaff(var1);
+         boolean var7 = var10 || this.pl.ranks().isStaff(var1);
          int[] var8 = new int[]{var7 ? 0 : 3};
          if (!var7) {
             Msg.info(var1, "Téléportation " + var3 + " dans <white>3 s</white>, ne bouge pas...");

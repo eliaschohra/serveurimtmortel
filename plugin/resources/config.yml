@@ -28,9 +28,12 @@ dragon-toutes-les-heures: 48
 # (zones : hub, parkour, skyhub, skyblock, parcelles)
 mondes:
   hub:
-    spawn: ""
+    # Releve dans la carte livree : l'endroit ou se tenait son auteur.
+    # Si ce n'est pas le bon, place-toi au bon endroit et tape /imt monde spawn hub
+    spawn: "bdeimt_hub;191.5;-44.0;142.5;0.0;0.0"
   parkour:
-    spawn: ""
+    # Le depart du Warden Parkour, releve dans la carte livree.
+    spawn: "bdeimt_parkour;0.5;43.0;-0.5;1.5;0.3"
   parcelles:
     spawn: ""
   skyhub:

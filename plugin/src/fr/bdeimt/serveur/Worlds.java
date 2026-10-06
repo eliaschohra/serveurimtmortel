@@ -44,6 +44,11 @@ public final class Worlds implements Listener {
       boolean canBuild(Player p, Location at);
    }
 
+   /** Points d'arrivee releves dans les cartes fournies, faute de reglage. */
+   private static final Map<Zone, String> DEFAULT_SPAWNS = Map.of(
+      Zone.HUB, "bdeimt_hub;191.5;-44.0;142.5;0.0;0.0",
+      Zone.PARKOUR, "bdeimt_parkour;0.5;43.0;-0.5;1.5;0.3"
+   );
    private final BDEIMT pl;
    private final Map<Zone, BuildRule> buildRules = new EnumMap<>(Zone.class);
    private final Map<Zone, Function<Player, Location>> spawns = new EnumMap<>(Zone.class);
@@ -237,6 +242,14 @@ public final class Worlds implements Listener {
       Location fromConfig = Util.loc(this.pl.getConfig().getString("mondes." + zone.name().toLowerCase(java.util.Locale.ROOT) + ".spawn"));
       if (fromConfig != null) {
          return fromConfig;
+      }
+
+      // Rien dans config.yml : on retombe sur les coordonnees relevees dans les
+      // cartes livrees, car leur point de reapparition enregistre est faux
+      // (celui du hub envoie sous la carte).
+      Location known = Util.loc(DEFAULT_SPAWNS.get(zone));
+      if (known != null) {
+         return known;
       }
 
       World w = this.world(zone);
