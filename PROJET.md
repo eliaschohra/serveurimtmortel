@@ -3,7 +3,7 @@
 Ce document sert de point d'entrée à Claude Code (ou à n'importe quel développeur)
 pour reprendre le projet sans avoir l'historique de la conversation.
 
-Dernière mise à jour : 6 octobre 2026 — plugin BDEIMT **v2.0**.
+Dernière mise à jour : 6 octobre 2026 — plugin BDEIMT **v3.0**.
 
 ---
 
@@ -175,8 +175,14 @@ une par minute (dragon, sauvegarde, classement), et les annonces de Poulpy.
 | `Parkour.java` | Le parkour du mois, ses points de contrôle et son classement |
 | `Plots.java` | Les parcelles en créatif, leur générateur de monde et les votes |
 | `Skyblock.java` | Les îles, toutes dans un seul monde, sur une grille de 256 blocs |
-| `SkyHub.java` | La place centrale du skyblock : champ, enclos, mine, marchands |
-| `ThirdParty.java` | Retouches sur les autres plugins (message de SkinsRestorer) |
+| `SkyHub.java` | Le lobby du skyblock (carte SkySpawn) : grand panneau des règles, panneau latéral solde / îles / marché |
+| `ThirdParty.java` | Coupe l'avertissement « third-party launchers » de SkinsRestorer (`login.offlineModeWarning.enabled`) |
+| `MapRepair.java` | Recolle une carte coupée en deux par une importation ratée de Paper 26 — testé par `build/tests` |
+| `Skins.java` | Skins des PNJ depuis un PNG (via MineSkin) ; skin de l'admin confié à SkinsRestorer |
+| `Sounds.java` | Pack de sons optionnel, extrait joué sur `/vote ‹liste›` en survie |
+| `Economy.java` | Le solde en pièces du skyblock, `/solde`, `/payer` |
+| `Shops.java` | Les 11 marchands du skyblock, catalogue dans `marchands.yml` |
+| `Market.java` | Le marché entre joueurs, `/marche` |
 
 ### Fichiers créés sur le serveur
 
@@ -277,6 +283,28 @@ Conséquences pratiques :
 - Multiverse doit se charger **après** nous (`loadbefore`), pour ne pas lancer
   sa propre importation avant notre réparation.
 
+### Le skin d'un joueur connecté
+
+Changer soi-même le profil d'un joueur connecté (`Player#setPlayerProfile`)
+oblige son client à tout recharger : écran « Loading terrain ». Le faire à
+chaque changement de monde donnait l'impression d'être téléporté deux fois.
+Le skin de l'admin est donc confié **une fois** à SkinsRestorer
+(`skin set ‹url› ‹joueur›`, syntaxe relevée dans son code), qui l'applique à
+la connexion avant que le joueur n'apparaisse.
+
+### Les PNJ et les chunks
+
+Les PNJ (`setPersistent(false)`, pour ne pas se dédoubler au redémarrage)
+sont effacés quand Minecraft décharge leur coin de carte. Chaque PNJ et
+marchand pose donc un ticket de chunk, et un garde-fou toutes les dix
+secondes repose ceux qui manquent.
+
+### La boussole et WorldEdit
+
+La boussole est la baguette de navigation de WorldEdit : elle téléporte au
+clic quiconque en a le droit. Le menu des modes utilise une boussole de
+récupération.
+
 ### Les univers séparés
 
 - **L'inventaire à la reconnexion.** Minecraft rend au joueur l'inventaire du
@@ -325,7 +353,7 @@ chat ; deux groupes différents ne partagent rien.
 | `HUB` | `bdeimt_hub` | lobby | aventure | non | non | non |
 | `SURVIE` | `world` (+ nether, end) | survie | survie | oui | oui | oui |
 | `PARKOUR` | `bdeimt_parkour` | parkour | aventure | non | non | non |
-| `SKYHUB` | `bdeimt_skyhub` | skyblock | survie | non | blé et minerai | oui |
+| `SKYHUB` | `bdeimt_skyspawn` | skyblock | aventure | non | non | non |
 | `SKYBLOCK` | `bdeimt_skyblock` | skyblock | survie | non | sur son île | oui |
 | `PARCELLES` | `bdeimt_parcelles` | parcelles | créatif | non | sur sa parcelle | non |
 
