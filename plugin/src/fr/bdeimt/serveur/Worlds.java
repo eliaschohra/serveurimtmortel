@@ -600,7 +600,7 @@ public final class Worlds implements Listener {
          return true;
       }
 
-      Msg.raw(p, "<dark_gray>» <gray>Tu es maintenant dans " + zone.color + zone.shortLabel() + "</gray>.");
+      Msg.raw(p, "<dark_gray>» <gray>Tu es maintenant dans " + zone.colored() + "<gray>.</gray>");
       Util.sound(p, "entity.enderman.teleport", 0.6F, 1.4F);
       return true;
    }
@@ -639,13 +639,13 @@ public final class Worlds implements Listener {
       }
 
       this.pl.tab().refresh(p);
-      this.pl.skins().applyToAdmin(p);
    }
 
    // ------------------------------------------------------------ protection
 
+   /** L'admin en creatif peut retoucher n'importe quelle carte. */
    private boolean bypass(Player p) {
-      return p.isOp() && p.getGameMode() == GameMode.CREATIVE && this.pl.ranks().isAdmin(p);
+      return p.getGameMode() == GameMode.CREATIVE && this.pl.ranks().isAdmin(p);
    }
 
    private boolean canBuild(Player p, Location at) {
@@ -666,7 +666,7 @@ public final class Worlds implements Listener {
    public void onBreak(BlockBreakEvent e) {
       if (!this.canBuild(e.getPlayer(), e.getBlock().getLocation())) {
          e.setCancelled(true);
-         this.denied(e.getPlayer());
+         this.denied(e.getPlayer(), e.getBlock().getLocation());
       }
    }
 
@@ -674,16 +674,20 @@ public final class Worlds implements Listener {
    public void onPlace(BlockPlaceEvent e) {
       if (!this.canBuild(e.getPlayer(), e.getBlock().getLocation())) {
          e.setCancelled(true);
-         this.denied(e.getPlayer());
+         this.denied(e.getPlayer(), e.getBlock().getLocation());
       }
    }
 
-   private void denied(Player p) {
-      Zone zone = this.zoneOf(p);
+   /** Dire pourquoi, en parlant du monde du BLOC vise, pas de celui du joueur. */
+   private void denied(Player p, Location at) {
+      Zone zone = this.zoneOf(at.getWorld());
+
       if (zone.build) {
-         Msg.err(p, "Tu ne peux rien modifier ici.");
+         Msg.err(p, "Ce n'est pas chez toi : tu ne peux rien modifier ici.");
+      } else if (this.pl.ranks().isAdmin(p)) {
+         Msg.err(p, "On ne casse rien dans <white>" + zone.shortLabel() + "</white>. <gray>Pour modifier la carte : /gamemode creative.</gray>");
       } else {
-         Msg.err(p, "On ne casse rien dans " + zone.color + zone.shortLabel() + "</gray>.");
+         Msg.err(p, "On ne casse rien dans <white>" + zone.shortLabel() + "</white>.");
       }
    }
 
@@ -695,7 +699,7 @@ public final class Worlds implements Listener {
          if (attacker != null && !attacker.equals(victim)) {
             if (!zone.pvp) {
                e.setCancelled(true);
-               Msg.err(attacker, "On ne se bat pas dans " + zone.color + zone.shortLabel() + "</gray>.");
+               Msg.err(attacker, "On ne se bat pas dans <white>" + zone.shortLabel() + "</white>.");
                return;
             }
 
@@ -818,7 +822,7 @@ public final class Worlds implements Listener {
       Zone zone = this.zoneOf(p);
       if (!this.allowed(zone, name)) {
          e.setCancelled(true);
-         Msg.err(p, "<white>/" + name + "</white> ne marche pas dans " + zone.color + zone.shortLabel() + "</gray>.");
+         Msg.err(p, "<white>/" + name + "</white> ne marche pas dans <white>" + zone.shortLabel() + "</white>.");
          Msg.info(p, "Reprends la boussole pour revenir choisir un monde.");
       }
    }

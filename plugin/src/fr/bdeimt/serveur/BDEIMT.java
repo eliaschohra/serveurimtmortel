@@ -347,6 +347,7 @@ public final class BDEIMT extends JavaPlugin {
       }, 1200L, 1200L);
       // Le ble repousse toutes les 20 minutes, les betes toutes les 30,
       // et les filons de la mine se reforment chaque heure.
+      Bukkit.getScheduler().runTaskTimer(this, this.npcs::watch, 200L, 200L);
       Bukkit.getScheduler().runTaskTimer(this, this.skyhub::regrowFarm, 24000L, 24000L);
       Bukkit.getScheduler().runTaskTimer(this, this.skyhub::restock, 36000L, 36000L);
       Bukkit.getScheduler().runTaskTimer(this, this.skyhub::regrowVeins, 72000L, 72000L);

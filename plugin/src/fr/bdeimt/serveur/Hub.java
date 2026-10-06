@@ -49,8 +49,11 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
    // -------------------------------------------------------------- boussole
 
    public ItemStack compass() {
+      // Pas une vraie boussole : c'est la baguette de navigation de WorldEdit,
+      // qui teleporte au clic gauche et au clic droit tous ceux qui en ont
+      // le droit. La boussole de recuperation lui ressemble et ne fait rien.
       ItemStack item = Util.item(
-         Material.COMPASS,
+         Material.RECOVERY_COMPASS,
          1,
          "<gradient:#4FC3FF:#B66BFF><bold>Choisir un mode de jeu</bold></gradient>",
          "<gray>Clic droit pour ouvrir le menu.</gray>",
@@ -67,19 +70,33 @@ public final class Hub implements Listener, org.bukkit.command.CommandExecutor {
 
    private boolean isCompass(ItemStack item) {
       return item != null
-         && item.getType() == Material.COMPASS
+         && (item.getType() == Material.RECOVERY_COMPASS || item.getType() == Material.COMPASS)
          && item.hasItemMeta()
          && item.getItemMeta().getPersistentDataContainer().has(this.compassKey, PersistentDataType.BYTE);
    }
 
-   @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
+   /** Clic droit : le menu. Clic gauche : rien du tout. */
+   @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
    public void onUse(PlayerInteractEvent e) {
-      if (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-         if (this.isCompass(e.getItem()) && this.pl.auth().isLogged(e.getPlayer())) {
-            e.setCancelled(true);
-            new Hub.Chooser(this.pl).open(e.getPlayer());
-            Util.sound(e.getPlayer(), "ui.button.click", 0.5F, 1.6F);
-         }
+      if (!this.isCompass(e.getItem())) {
+         return;
+      }
+
+      e.setCancelled(true);
+      e.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
+      e.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
+
+      if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && this.pl.auth().isLogged(e.getPlayer())) {
+         new Hub.Chooser(this.pl).open(e.getPlayer());
+         Util.sound(e.getPlayer(), "ui.button.click", 0.5F, 1.6F);
+      }
+   }
+
+   /** On ne passe pas la boussole dans l'autre main. */
+   @EventHandler(ignoreCancelled = true)
+   public void onSwap(org.bukkit.event.player.PlayerSwapHandItemsEvent e) {
+      if (this.isCompass(e.getMainHandItem()) || this.isCompass(e.getOffHandItem())) {
+         e.setCancelled(true);
       }
    }
 

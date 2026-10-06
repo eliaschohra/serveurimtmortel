@@ -574,7 +574,6 @@ public final class Auth implements Listener, CommandExecutor {
          var3.worldGroup != null && !var3.worldGroup.isBlank() ? var3.worldGroup : this.pl.worlds().zoneOf(var2).group
       );
       this.pl.lobby().enter(var2);
-      this.pl.skins().applyToAdmin(var2);
       Bukkit.getScheduler().runTaskLater(this.pl, () -> this.prompt(var2, true), 15L);
    }
 

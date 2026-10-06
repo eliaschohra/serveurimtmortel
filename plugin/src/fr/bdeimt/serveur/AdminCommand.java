@@ -355,7 +355,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
 
       Player p = (Player)sender;
       this.pl.worlds().setSpawn(zone, p.getLocation());
-      Msg.ok(sender, "Point d'arrivee de " + zone.color + zone.shortLabel() + "</gray> fixe ici <gray>(" + Util.coords(p.getLocation()) + ")</gray>.");
+      Msg.ok(sender, "Point d'arrivee de " + zone.colored() + " fixe ici <gray>(" + Util.coords(p.getLocation()) + ")</gray>.");
    }
 
    /** {@code /imt portail} : poser un passage physique vers un mode de jeu. */
@@ -393,13 +393,13 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       }
 
       this.pl.hub().addPortal(zone, p.getLocation(), radius);
-      Msg.ok(sender, "Portail vers " + zone.color + zone.shortLabel() + "</gray> pose ici, rayon <white>" + radius + "</white>.");
+      Msg.ok(sender, "Portail vers " + zone.colored() + " pose ici, rayon <white>" + radius + "</white>.");
    }
 
    /** {@code /imt pnj} : poser Zaza et le Mobutu, et leur donner un skin. */
    private void pnj(CommandSender sender, String[] args) {
       if (args.length < 2) {
-         Msg.err(sender, "/imt pnj ‹zaza|mobutu› ici   —   /imt pnj skin ‹zaza|mobutu› ‹pseudo›");
+         Msg.err(sender, "/imt pnj ‹zaza|mobutu|zaza-survie›   —   /imt pnj skin ‹zaza|mobutu› ‹pseudo|fichier›");
          return;
       }
 
@@ -430,8 +430,8 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       }
 
       String id = args[1].toLowerCase(Locale.ROOT);
-      if (!id.equals("zaza") && !id.equals("mobutu")) {
-         Msg.err(sender, "Il n'y a que zaza et mobutu.");
+      if (!Npcs.IDS.contains(id)) {
+         Msg.err(sender, "PNJ connus : zaza, mobutu (dans le lobby), zaza-survie (en survie).");
          return;
       }
 
@@ -440,8 +440,9 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       }
 
       Player p = (Player)sender;
-      if (this.pl.worlds().zoneOf(p) != Zone.HUB) {
-         Msg.err(sender, "Les PNJ vivent dans le lobby : place-toi la-bas d'abord.");
+      Zone wanted = id.equals("zaza-survie") ? Zone.SURVIE : Zone.HUB;
+      if (this.pl.worlds().zoneOf(p) != wanted) {
+         Msg.err(sender, "<white>" + id + "</white> vit dans " + wanted.label + " : place-toi la-bas d'abord.");
          return;
       }
 

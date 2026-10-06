@@ -41,38 +41,82 @@ public final class Npcs implements Listener {
    private final BDEIMT pl;
    private final NamespacedKey key;
 
+   /** Tous les PNJ connus : deux dans le lobby, une Zaza en survie. */
+   public static final java.util.List<String> IDS = java.util.List.of("zaza", "mobutu", "zaza-survie");
+
    public Npcs(BDEIMT pl) {
       this.pl = pl;
       this.key = new NamespacedKey(pl, "pnj");
    }
 
+   /** Zaza en survie est une Zaza comme les autres : meme skin, meme vie. */
+   private static String skinOf(String id) {
+      return id.startsWith("zaza") ? "zaza" : id;
+   }
+
+   private static boolean isZaza(String id) {
+      return id != null && id.startsWith("zaza");
+   }
+
    // --------------------------------------------------------------- pose
 
-   /** Enleve les anciens mannequins et repose les deux PNJ. */
+   /** Enleve les anciens mannequins et repose tous les PNJ. */
    public void spawnAll() {
-      World w = this.pl.worlds().world(Zone.HUB);
-      if (w == null) {
-         return;
-      }
-
-      for (Entity entity : w.getEntities()) {
-         if (entity.getPersistentDataContainer().has(this.key, PersistentDataType.STRING)) {
-            entity.remove();
+      for (World w : Bukkit.getWorlds()) {
+         for (Entity entity : w.getEntities()) {
+            if (entity.getPersistentDataContainer().has(this.key, PersistentDataType.STRING)) {
+               entity.remove();
+            }
          }
       }
 
-      this.spawn("zaza");
-      this.spawn("mobutu");
+      for (String id : IDS) {
+         this.spawn(id);
+      }
    }
 
-   /** Position de pose d'un PNJ, reglee par {@code /imt pnj ‹nom› ici}. */
+   /**
+    * Garde-fou, toutes les dix secondes : un PNJ qui manque est repose.
+    *
+    * <p>Les PNJ ne sont pas sauvegardes avec le monde (sinon ils se
+    * dedoubleraient a chaque redemarrage). Le revers : quand plus personne
+    * n'est pres d'eux, Minecraft decharge leur coin de carte et les efface.
+    * C'est ce qui les faisait disparaitre. Leur coin de carte est donc garde
+    * charge en permanence, et ce garde-fou rattrape tous les autres cas.
+    */
+   public void watch() {
+      for (String id : IDS) {
+         Location at = this.position(id);
+
+         if (at == null || at.getWorld() == null) {
+            continue;
+         }
+
+         at.getWorld().addPluginChunkTicket(at.getBlockX() >> 4, at.getBlockZ() >> 4, this.pl);
+
+         if (this.find(id) == null && !this.respawning.contains(id)) {
+            this.spawn(id);
+         }
+      }
+   }
+
+   private final java.util.Set<String> respawning = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+   /** Position de pose d'un PNJ, reglee par {@code /imt pnj ‹nom›}. */
    public Location position(String id) {
       Location configured = Util.loc(this.pl.getConfig().getString("pnj." + id + ".position"));
+
       if (configured != null) {
          return configured;
       }
 
+      // Zaza en survie n'apparait que si on l'a posee a la main.
+      if ("zaza-survie".equals(id)) {
+         return null;
+      }
+
       Location spawn = this.pl.worlds().spawnOf(Zone.HUB, null);
+
       if (spawn == null) {
          return null;
       }
@@ -89,11 +133,14 @@ public final class Npcs implements Listener {
    /** Pose un PNJ, en remplacant celui qui s'y trouve deja. */
    public void spawn(String id) {
       Location at = this.position(id);
+
       if (at == null || at.getWorld() == null) {
          return;
       }
 
       this.remove(id);
+      this.respawning.remove(id);
+      at.getWorld().addPluginChunkTicket(at.getBlockX() >> 4, at.getBlockZ() >> 4, this.pl);
       boolean mobutu = "mobutu".equals(id);
 
       try {
@@ -105,14 +152,15 @@ public final class Npcs implements Listener {
             npc.setInvulnerable(false);
             npc.setPersistent(false);
             npc.setRemoveWhenFarAway(false);
-            npc.setDescription(Msg.mm(mobutu ? "<gray>Ne le reveille pas.</gray>" : "<gray>Frappe, elle revient.</gray>"));
+            // Rien sous le nom de Zaza ; une mise en garde sous celui du Mobutu.
+            npc.setDescription(mobutu ? Msg.mm("<gray>Ne le reveille pas.</gray>") : null);
             AttributeInstance health = npc.getAttribute(Attribute.MAX_HEALTH);
             if (health != null) {
                health.setBaseValue(mobutu ? MOBUTU_HEALTH : ZAZA_HEALTH);
             }
 
             npc.setHealth(mobutu ? MOBUTU_HEALTH : ZAZA_HEALTH);
-            this.applySkin(npc, id);
+            this.applySkin(npc, skinOf(id));
          });
       } catch (Throwable t) {
          this.pl.getLogger().warning("PNJ " + id + " impossible a poser : " + t.getMessage());
@@ -120,8 +168,7 @@ public final class Npcs implements Listener {
    }
 
    public void remove(String id) {
-      World w = this.pl.worlds().world(Zone.HUB);
-      if (w != null) {
+      for (World w : Bukkit.getWorlds()) {
          for (Entity entity : w.getEntities()) {
             if (id.equals(entity.getPersistentDataContainer().get(this.key, PersistentDataType.STRING))) {
                entity.remove();
@@ -131,12 +178,15 @@ public final class Npcs implements Listener {
    }
 
    private Mannequin find(String id) {
-      World w = this.pl.worlds().world(Zone.HUB);
-      if (w != null) {
-         for (Entity entity : w.getEntities()) {
-            if (entity instanceof Mannequin npc && id.equals(entity.getPersistentDataContainer().get(this.key, PersistentDataType.STRING))) {
-               return npc;
-            }
+      Location at = this.position(id);
+
+      if (at == null || at.getWorld() == null) {
+         return null;
+      }
+
+      for (Entity entity : at.getWorld().getEntities()) {
+         if (entity instanceof Mannequin npc && !npc.isDead() && id.equals(entity.getPersistentDataContainer().get(this.key, PersistentDataType.STRING))) {
+            return npc;
          }
       }
 
@@ -237,15 +287,16 @@ public final class Npcs implements Listener {
 
       e.getDrops().clear();
       e.setDroppedExp(0);
+      this.respawning.add(id);
 
-      if ("zaza".equals(id)) {
-         Bukkit.getScheduler().runTaskLater(this.pl, () -> this.spawn("zaza"), RESPAWN_TICKS);
+      if (isZaza(id)) {
+         Bukkit.getScheduler().runTaskLater(this.pl, () -> this.spawn(id), RESPAWN_TICKS);
          return;
       }
 
       if ("mobutu".equals(id)) {
          this.mobutuFalls(e.getEntity().getKiller());
-         Bukkit.getScheduler().runTaskLater(this.pl, () -> this.spawn("mobutu"), RESPAWN_TICKS * 10L);
+         Bukkit.getScheduler().runTaskLater(this.pl, () -> this.spawn(id), RESPAWN_TICKS * 10L);
       }
    }
 
@@ -273,7 +324,8 @@ public final class Npcs implements Listener {
 
    /** Retire les PNJ au /stop, pour ne pas les laisser en double. */
    public void clearAll() {
-      this.remove("zaza");
-      this.remove("mobutu");
+      for (String id : IDS) {
+         this.remove(id);
+      }
    }
 }

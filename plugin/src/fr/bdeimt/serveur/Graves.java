@@ -499,7 +499,7 @@ public final class Graves implements Listener, CommandExecutor {
    private void updateBar(Player var1) {
       List<Graves.Grave> var2 = this.of(var1.getUniqueId());
       BossBar var3 = this.bars.get(var1.getUniqueId());
-      if (!var2.isEmpty() && !this.pl.lobby().isLobby(var1.getWorld())) {
+      if (!var2.isEmpty() && this.pl.worlds().zoneOf(var1) == Zone.SURVIE) {
          Graves.Grave var4 = null;
          double var5 = Double.MAX_VALUE;
 

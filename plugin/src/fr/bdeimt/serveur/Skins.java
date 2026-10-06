@@ -251,15 +251,18 @@ public final class Skins {
    }
 
    /**
-    * Donne au Mobutu — le vrai, le joueur — le skin de son PNJ.
+    * Donne au Mobutu — le vrai, le joueur — le skin de son PNJ, dans tous les
+    * mondes.
     *
-    * <p>Le skin pose sur {@code mobutu} s'applique aussi au compte admin, quel
-    * que soit celui que le compte porte d'origine. Paper permet de changer le
-    * profil d'un joueur en cours de partie : tous les clients qui le voient le
-    * re-enregistrent avec le nouveau skin.
+    * <p>Changer soi-meme le profil d'un joueur connecte oblige son client a
+    * tout recharger : c'est l'ecran « Loading terrain » qui revenait a chaque
+    * changement de monde. On confie donc le skin a SkinsRestorer, qui le pose
+    * une fois pour toutes et le reapplique a chaque connexion, avant meme que
+    * le joueur n'apparaisse, sans aucun rechargement.
     *
-    * <p>C'est fait deux fois, a une et a dix secondes : SkinsRestorer pose le
-    * sien a l'arrivee, et il faut passer apres lui.
+    * <p>Ce n'est fait qu'une fois par image : l'URL deja confiee est retenue.
+    * Sans SkinsRestorer, on change le profil nous-memes, une seule fois a la
+    * connexion.
     */
    public void applyToAdmin(Player p) {
       if (p == null || !p.getName().equalsIgnoreCase(this.pl.adminName())) {
@@ -274,25 +277,54 @@ public final class Skins {
       String signature = this.pl.getConfig().getString("pnj.mobutu.signature", "");
 
       if (texture == null || texture.isBlank()) {
-         this.pl.getLogger().info("Pas encore de skin pour le Mobutu : depose mobutu.png dans plugins/BDEIMT/skins/.");
          return;
       }
 
-      for (long delay : new long[]{20L, 200L}) {
-         Bukkit.getScheduler().runTaskLater(this.pl, () -> {
-            if (!p.isOnline()) {
-               return;
-            }
+      String url = textureUrl(texture.trim());
 
-            try {
-               PlayerProfile profile = p.getPlayerProfile();
-               profile.removeProperty("textures");
-               profile.setProperty(new ProfileProperty("textures", texture.trim(), signature == null || signature.isBlank() ? null : signature.trim()));
-               p.setPlayerProfile(profile);
-            } catch (Throwable t) {
-               this.pl.getLogger().warning("Skin du Mobutu non applique a " + p.getName() + " : " + t.getMessage());
+      if (Bukkit.getPluginManager().getPlugin("SkinsRestorer") != null && url != null) {
+         if (url.equals(this.pl.getConfig().getString("pnj.mobutu.confie-a-skinsrestorer", ""))) {
+            return;
+         }
+
+         // Syntaxe relevee dans le code de SkinsRestorer :
+         //    skin set <skinName> <selector>   (SkinCommand#onSkinSetOther)
+         // une URL de texture y est acceptee comme nom de skin.
+         String command = "skin set \"" + url + "\" " + p.getName();
+         Bukkit.getScheduler().runTaskLater(this.pl, () -> {
+            if (p.isOnline() && Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command)) {
+               this.pl.getConfig().set("pnj.mobutu.confie-a-skinsrestorer", url);
+               this.pl.saveConfig();
+               this.pl.getLogger().info("Skin du Mobutu confie a SkinsRestorer pour " + p.getName() + ".");
             }
-         }, delay);
+         }, 40L);
+         return;
+      }
+
+      Bukkit.getScheduler().runTaskLater(this.pl, () -> {
+         if (!p.isOnline()) {
+            return;
+         }
+
+         try {
+            PlayerProfile profile = p.getPlayerProfile();
+            profile.removeProperty("textures");
+            profile.setProperty(new ProfileProperty("textures", texture.trim(), signature == null || signature.isBlank() ? null : signature.trim()));
+            p.setPlayerProfile(profile);
+         } catch (Throwable t) {
+            this.pl.getLogger().warning("Skin du Mobutu non applique a " + p.getName() + " : " + t.getMessage());
+         }
+      }, 20L);
+   }
+
+   /** L'adresse de l'image cachee dans la valeur « textures » (du JSON en base64). */
+   static String textureUrl(String texture) {
+      try {
+         String json = new String(java.util.Base64.getDecoder().decode(texture), StandardCharsets.UTF_8);
+         Matcher m = Pattern.compile("\"url\"\\s*:\\s*\"(https?://[^\"]+)\"").matcher(json);
+         return m.find() ? m.group(1) : null;
+      } catch (Exception ex) {
+         return null;
       }
    }
 
