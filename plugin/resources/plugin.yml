@@ -3,7 +3,7 @@ version: '2.0'
 main: fr.bdeimt.serveur.BDEIMT
 api-version: '1.21'
 author: Elias
-description: Serveur du BDE de l'IMT - lobby, connexion, votes, kits, tombes, tpa, echanges.
+description: Serveur du BDE de l'IMT - hub, survie, parkour, skyblock, parcelles creatives.
 softdepend: [SuperVanish, PremiumVanish, CoreProtect, GrimAC]
 load: POSTWORLD
 
