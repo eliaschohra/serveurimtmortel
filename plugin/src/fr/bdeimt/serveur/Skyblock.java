@@ -93,6 +93,11 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    // ----------------------------------------------------------------- monde
 
    public void init() {
+      if (!this.pl.worlds().enabled(Zone.SKYBLOCK)) {
+         this.pl.getLogger().info("Skyblock ferme (modes.skyblock dans config.yml) : son monde n'est pas charge.");
+         return;
+      }
+
       if (Bukkit.getWorld(Zone.SKYBLOCK.world) == null) {
          try {
             Bukkit.createWorld(

@@ -82,6 +82,10 @@ public final class SkyHub implements Listener, Worlds.BuildRule, org.bukkit.comm
    // ----------------------------------------------------------------- monde
 
    public void init() {
+      if (!this.pl.worlds().enabled(Zone.SKYHUB)) {
+         return;
+      }
+
       if (Bukkit.getWorld(Zone.SKYHUB.world) == null) {
          try {
             Bukkit.createWorld(

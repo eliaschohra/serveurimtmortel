@@ -181,6 +181,11 @@ public final class Worlds implements Listener {
          return;
       }
 
+      // L'erreur classique : decompresser l'archive cree un dossier de plus, et
+      // le monde se retrouve dans bdeimt_hub/Empty/ au lieu de bdeimt_hub/.
+      // On remet ca a plat tout seul plutot que d'afficher « monde absent ».
+      this.unnest(zone);
+
       File folder = new File(Bukkit.getWorldContainer(), zone.world);
       if (!new File(folder, "level.dat").exists()) {
          this.pl.getLogger().warning("Monde absent : " + zone.world + " — " + this.diagnose(zone));
@@ -281,9 +286,19 @@ public final class Worlds implements Listener {
       return zone.world == null ? (World)Bukkit.getWorlds().get(0) : Bukkit.getWorld(zone.world);
    }
 
-   /** Un mode de jeu est disponible quand son monde est bien la. */
+   /**
+    * Un mode est-il ouvert ? On peut en fermer un temporairement avec
+    * {@code modes.‹zone›: false} dans config.yml, sans toucher a ses mondes :
+    * il reapparait « bientot disponible » dans la boussole, ses commandes
+    * cessent de repondre, et son monde n'est meme pas charge.
+    */
+   public boolean enabled(Zone zone) {
+      return this.pl.getConfig().getBoolean("modes." + zone.group, true);
+   }
+
+   /** Un mode de jeu est disponible quand il est ouvert et que son monde est la. */
    public boolean available(Zone zone) {
-      return this.world(zone) != null;
+      return this.enabled(zone) && this.world(zone) != null;
    }
 
    public Zone zoneOf(World w) {
@@ -443,10 +458,16 @@ public final class Worlds implements Listener {
       if (zone == Zone.PARKOUR) {
          this.pl.parkour().start(p);
       } else if (zone != Zone.PARCELLES) {
-         // Le parkour et les parcelles ont chacun leur panneau lateral ; partout
-         // ailleurs on rend au joueur le tableau commun, celui des votes.
+         // Le panneau des classements — votes, aura, listes — appartient a la
+         // survie : il vit sur le tableau principal, que tout le monde partage.
+         // Ailleurs on donne au joueur un tableau vierge, sinon il verrait le
+         // classement de la survie depuis le skyblock ou le hub.
          try {
-            p.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+            p.setScoreboard(
+               zone == Zone.SURVIE
+                  ? Bukkit.getScoreboardManager().getMainScoreboard()
+                  : Bukkit.getScoreboardManager().getNewScoreboard()
+            );
          } catch (Throwable t) {
          }
       }
@@ -626,7 +647,7 @@ public final class Worlds implements Listener {
    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
    public void onCommand(org.bukkit.event.player.PlayerCommandPreprocessEvent e) {
       Player p = e.getPlayer();
-      if (!this.pl.auth().isLogged(p) || this.bypass(p)) {
+      if (!this.pl.auth().isLogged(p)) {
          return;
       }
 

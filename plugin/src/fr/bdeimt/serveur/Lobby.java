@@ -79,6 +79,25 @@ public final class Lobby implements Listener {
       return this.spawn.clone();
    }
 
+   /**
+    * Ou l'on attend d'etre identifie.
+    *
+    * <p>Dans le hub des qu'il est la : c'est le decor du serveur, autant
+    * l'avoir sous les yeux pendant le /login. L'ile flottante dans le vide ne
+    * sert plus que de secours, quand la carte du hub n'est pas encore posee.
+    */
+   public Location loginSpawn() {
+      if (this.pl.getConfig().getBoolean("connexion-dans-le-hub", true) && this.pl.worlds().available(Zone.HUB)) {
+         Location hub = this.pl.worlds().spawnOf(Zone.HUB, null);
+
+         if (hub != null && hub.getWorld() != null) {
+            return hub;
+         }
+      }
+
+      return this.spawn.clone();
+   }
+
    public boolean isLobby(World var1) {
       return var1 != null && var1.getName().equals("bdeimt_lobby");
    }
@@ -452,7 +471,7 @@ public final class Lobby implements Listener {
       var1.setFireTicks(0);
       var1.setAllowFlight(false);
       var1.setFlying(false);
-      var1.teleport(this.spawn);
+      var1.teleport(this.loginSpawn());
       var1.setGameMode(GameMode.ADVENTURE);
       this.freeze(var1);
    }

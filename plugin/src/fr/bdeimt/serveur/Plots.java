@@ -98,6 +98,11 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
 
    /** Cree le monde des parcelles au demarrage s'il n'existe pas encore. */
    public void init() {
+      if (!this.pl.worlds().enabled(Zone.PARCELLES)) {
+         this.pl.getLogger().info("Parcelles fermees (modes.parcelles dans config.yml) : leur monde n'est pas charge.");
+         return;
+      }
+
       if (Bukkit.getWorld(Zone.PARCELLES.world) == null) {
          try {
             Bukkit.createWorld(

@@ -23,6 +23,22 @@ dragon-toutes-les-heures: 48
 # ============================================================
 #  Les univers
 # ============================================================
+# Ouvrir ou fermer un mode de jeu. Un mode ferme s'affiche
+# « bientot disponible » dans la boussole, ses commandes ne repondent
+# plus, et son monde n'est meme pas charge. Rien n'est efface : remettre
+# true et redemarrer suffit a le rouvrir tel quel.
+modes:
+  survie: true
+  parkour: true
+  skyblock: false
+  parcelles: true
+
+# On attend le /login dans le hub plutot que sur l'ile flottante.
+# Mettre false pour revenir a l'ancienne ile du vide.
+connexion-dans-le-hub: true
+# ============================================================
+#  Points d'arrivee
+# ============================================================
 # Point d'arrivee de chaque monde. Le plus simple est de se placer
 # au bon endroit en jeu et de taper :  /imt monde spawn hub
 # (zones : hub, parkour, skyhub, skyblock, parcelles)

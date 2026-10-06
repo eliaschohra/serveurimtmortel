@@ -47,14 +47,38 @@ public final class Inventories {
       return new File(this.folder, uuid + ".yml");
    }
 
-   /** Le groupe ou le joueur est considere comme etant actuellement. */
+   /**
+    * Le groupe ou se trouve l'inventaire que le joueur porte en ce moment.
+    *
+    * <p>On ne peut pas le deduire du monde ou il est : quelqu'un qui se
+    * deconnecte avant de s'etre identifie a deja ete pose dans le hub, mais
+    * porte encore l'inventaire de la survie. Le groupe est donc ecrit dans sa
+    * fiche, et c'est elle qui fait foi.
+    */
    public String currentGroup(Player p) {
       String g = this.current.get(p.getUniqueId());
-      return g != null ? g : this.pl.worlds().zoneOf(p).group;
+
+      if (g != null) {
+         return g;
+      }
+
+      PlayerData data = this.pl.data().get(p);
+
+      if (data != null && data.worldGroup != null && !data.worldGroup.isBlank()) {
+         return data.worldGroup;
+      }
+
+      return this.pl.worlds().zoneOf(p).group;
    }
 
    public void setCurrentGroup(Player p, String group) {
       this.current.put(p.getUniqueId(), group);
+      PlayerData data = this.pl.data().get(p);
+
+      if (data != null) {
+         data.worldGroup = group;
+         data.touch();
+      }
    }
 
    public void forget(Player p) {
@@ -68,14 +92,14 @@ public final class Inventories {
    public void switchTo(Player p, String group) {
       String from = this.currentGroup(p);
       if (from.equals(group)) {
-         this.current.put(p.getUniqueId(), group);
+         this.setCurrentGroup(p, group);
          return;
       }
 
       YamlConfiguration yml = YamlConfiguration.loadConfiguration(this.file(p.getUniqueId()));
       this.store(p, yml.createSection(from));
       this.restore(p, yml.getConfigurationSection(group));
-      this.current.put(p.getUniqueId(), group);
+      this.setCurrentGroup(p, group);
 
       try {
          yml.save(this.file(p.getUniqueId()));

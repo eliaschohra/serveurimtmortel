@@ -168,6 +168,8 @@ public final class BDEIMT extends JavaPlugin {
    public void onEnable() {
       instance = this;
       this.saveDefaultConfig();
+      // Avant tout le reste : les modules lisent ces reglages des leur creation.
+      this.ensureDefaults();
       File var1 = new File(this.getDataFolder(), "images");
       if (!var1.exists() && !var1.mkdirs()) {
          this.getLogger().warning("Dossier images impossible a creer");
@@ -454,6 +456,42 @@ public final class BDEIMT extends JavaPlugin {
       }
 
       return new Location(var1, var3.getX() + 0.5, var3.getY(), var3.getZ() + 0.5, var2.getYaw(), 0.0F);
+   }
+
+   /**
+    * Ajoute a config.yml les reglages apparus depuis sa creation.
+    *
+    * <p>Le fichier du serveur n'est jamais remplace — le pseudo de l'admin et
+    * les reglages d'Elias y sont. On se contente donc d'y ecrire les cles qui
+    * manquent, sans jamais toucher a celles qui existent deja.
+    */
+   private void ensureDefaults() {
+      Object[][] var1 = new Object[][]{
+         {"modes.survie", true},
+         {"modes.parkour", true},
+         {"modes.skyblock", false},
+         {"modes.parcelles", true},
+         {"connexion-dans-le-hub", true},
+         {"mondes.hub.spawn", "bdeimt_hub;191.5;-44.0;142.5;0.0;0.0"},
+         {"mondes.parkour.spawn", "bdeimt_parkour;0.5;43.0;-0.5;1.5;0.3"},
+         {"pnj.mobutu.aussi-pour-l-admin", true},
+         {"pnj.zaza.modele", "classic"},
+         {"pnj.mobutu.modele", "classic"},
+         {"mineskin-cle", ""}
+      };
+      boolean var2 = false;
+
+      for (Object[] var6 : var1) {
+         if (!this.getConfig().contains((String)var6[0])) {
+            this.getConfig().set((String)var6[0], var6[1]);
+            var2 = true;
+         }
+      }
+
+      if (var2) {
+         this.saveConfig();
+         this.getLogger().info("Nouveaux reglages ajoutes a config.yml.");
+      }
    }
 
    private void fixServerSettings() {

@@ -440,7 +440,7 @@ public final class Auth implements Listener, CommandExecutor {
          var5 = Zone.HUB.mode;
       } else {
          var4 = Util.loc(var3.returnLoc);
-         if (var4 == null || this.pl.lobby().isLobby(var4.getWorld())) {
+         if (var4 == null || this.pl.worlds().zoneOf(var4.getWorld()) != Zone.SURVIE) {
             var4 = this.pl.survivalSpawn();
          }
 
@@ -546,7 +546,7 @@ public final class Auth implements Listener, CommandExecutor {
       this.onlineNames.add(var2.getName().toLowerCase(Locale.ROOT));
       this.logged.remove(var2.getUniqueId());
       PlayerData var3 = this.pl.data().get(var2);
-      if (!this.pl.lobby().isLobby(var2.getWorld()) && !var2.isDead()) {
+      if (this.pl.worlds().zoneOf(var2) == Zone.SURVIE && !var2.isDead()) {
          var3.returnLoc = Util.loc(var2.getLocation());
          var3.savedGameMode = var2.getGameMode().name();
          var3.touch();
@@ -563,7 +563,10 @@ public final class Auth implements Listener, CommandExecutor {
          }
       }
 
-      this.pl.inventories().setCurrentGroup(var2, this.pl.worlds().zoneOf(var2).group);
+      this.pl.inventories().setCurrentGroup(
+         var2,
+         var3.worldGroup != null && !var3.worldGroup.isBlank() ? var3.worldGroup : this.pl.worlds().zoneOf(var2).group
+      );
       this.pl.lobby().enter(var2);
       Bukkit.getScheduler().runTaskLater(this.pl, () -> this.prompt(var2, true), 15L);
    }
@@ -577,7 +580,7 @@ public final class Auth implements Listener, CommandExecutor {
          PlayerData var3 = this.pl.data().get(var2);
          var3.returnLoc = Util.loc(var1.getRespawnLocation());
          var3.touch();
-         var1.setRespawnLocation(this.pl.lobby().spawn());
+         var1.setRespawnLocation(this.pl.lobby().loginSpawn());
          Bukkit.getScheduler().runTask(this.pl, () -> {
             if (var2.isOnline() && !this.isLogged(var2)) {
                this.pl.lobby().enter(var2);
@@ -596,7 +599,7 @@ public final class Auth implements Listener, CommandExecutor {
       PlayerData var4 = this.pl.data().get(var2);
       if (var3) {
          Msg.broadcast(Msg.mm("<#FF5555>-</#FF5555> ").append(this.pl.ranks().display(var2)));
-         if (!this.pl.lobby().isLobby(var2.getWorld()) && !var2.isDead()) {
+         if (this.pl.worlds().zoneOf(var2) == Zone.SURVIE && !var2.isDead()) {
             var4.returnLoc = Util.loc(var2.getLocation());
             var4.savedGameMode = var2.getGameMode().name();
          }
@@ -612,6 +615,13 @@ public final class Auth implements Listener, CommandExecutor {
    private void prompt(Player var1, boolean var2) {
       if (var1.isOnline() && !this.isLogged(var1)) {
          boolean var3 = this.hasAccount(var1.getName());
+         Msg.big(
+            var1,
+            "<gradient:#4FC3FF:#B66BFF><bold>Serveur du BDE de l'IMT</bold></gradient>",
+            var3 ? "<white>/login</white> <gray>‹ton mot de passe›</gray>" : "<white>/register</white> <gray>‹mot de passe› ‹mot de passe›</gray>",
+            6000L
+         );
+
          if (var3) {
             Msg.poulpy(
                var1,

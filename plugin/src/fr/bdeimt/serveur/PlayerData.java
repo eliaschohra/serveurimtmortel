@@ -25,6 +25,8 @@ public final class PlayerData {
    public volatile int flySeconds;
    public volatile boolean guideSeen;
    public volatile String returnLoc;
+   /** Le groupe de mondes ou se trouve son inventaire actuel. */
+   public volatile String worldGroup;
    public volatile String savedGameMode;
    public volatile long mutedUntil;
    public volatile String muteReason;
@@ -82,6 +84,7 @@ public final class PlayerData {
       var3.flySeconds = var1.getInt("fly-secondes");
       var3.guideSeen = var1.getBoolean("guide-vu");
       var3.returnLoc = var1.getString("position-retour");
+      var3.worldGroup = var1.getString("groupe-de-mondes");
       var3.savedGameMode = var1.getString("mode-de-jeu");
       var3.mutedUntil = var1.getLong("mute-jusqua");
       var3.muteReason = var1.getString("mute-raison");
@@ -117,6 +120,7 @@ public final class PlayerData {
       var1.set("fly-secondes", this.flySeconds);
       var1.set("guide-vu", this.guideSeen);
       var1.set("position-retour", this.returnLoc);
+      var1.set("groupe-de-mondes", this.worldGroup);
       var1.set("mode-de-jeu", this.savedGameMode);
       var1.set("mute-jusqua", this.mutedUntil);
       var1.set("mute-raison", this.muteReason);
