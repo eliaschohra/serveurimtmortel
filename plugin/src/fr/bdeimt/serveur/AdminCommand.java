@@ -117,7 +117,17 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
    }
 
    private void help(CommandSender var1) {
-      Msg.raw(var1, "<#FF3B3B><bold>Commandes du Mobutu</bold></#FF3B3B>");
+      Msg.raw(
+         var1,
+         "<#FF3B3B><bold>Commandes du Mobutu</bold></#FF3B3B> <dark_gray>— BDEIMT <white>"
+            + this.pl.getPluginMeta().getVersion()
+            + "</white> <gray>(" + this.pl.getFileName() + ")</gray></dark_gray>"
+      );
+
+      if (!this.pl.doublesJar().isEmpty()) {
+         Msg.err(var1, "Jars en trop dans plugins/ : <white>" + String.join(", ", this.pl.doublesJar()) + "</white> — supprime-les !");
+      }
+
       Msg.raw(var1, " <white>/imt modo add|remove|liste ‹pseudo›</white> <gray>— gérer les modos");
       Msg.raw(var1, " <white>/imt resetmdp ‹pseudo›</white> <gray>— mot de passe oublié");
       Msg.raw(var1, " <white>/imt info ‹pseudo›</white> <gray>— fiche d'un joueur");

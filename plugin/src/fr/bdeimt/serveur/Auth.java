@@ -483,6 +483,12 @@ public final class Auth implements Listener, CommandExecutor {
 
          this.pl.tab().refresh(var1);
          this.pl.skins().applyToAdmin(var1);
+
+         if (!this.pl.doublesJar().isEmpty() && this.pl.ranks().isStaff(var1)) {
+            Msg.danger(var1, "DEUX PLUGINS BDEIMT", "<#FFB3B3>le serveur peut charger l'ancienne version</#FFB3B3>");
+            Msg.err(var1, "Dans <white>plugins/</white>, il y a aussi : <white>" + String.join(", ", this.pl.doublesJar()) + "</white>");
+            Msg.err(var1, "Supprime-les, garde seulement <white>" + this.pl.getFileName() + "</white>, puis <white>/stop</white>.");
+         }
       });
       Msg.broadcast(Msg.mm("<#55FF88>+</#55FF88> ").append(this.pl.ranks().display(var1)));
       var1.showTitle(
@@ -671,6 +677,14 @@ public final class Auth implements Listener, CommandExecutor {
                   this.hasAccount(var5.getName()) ? "<#4FC3FF>/login ‹mot de passe›</#4FC3FF>" : "<#55FF88>/register ‹mot de passe› ‹mot de passe›</#55FF88>"
                )
             );
+            // D'autres plugins de mondes (Multiverse et compagnie) teleportent
+            // parfois a la connexion. Tant que le joueur n'est pas identifie,
+            // on le ramene au lobby, quoi qu'il arrive.
+            Location var8 = this.pl.lobby().loginSpawn();
+
+            if (var8 != null && var8.getWorld() != null && (!var8.getWorld().equals(var5.getWorld()) || var5.getLocation().distanceSquared(var8) > 2500.0)) {
+               this.pl.lobby().enter(var5);
+            }
          }
       }
    }

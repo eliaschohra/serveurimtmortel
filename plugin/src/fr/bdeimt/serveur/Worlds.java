@@ -201,7 +201,15 @@ public final class Worlds implements Listener {
             this.tune(zone);
          }
       } catch (Throwable t) {
-         this.pl.getLogger().warning("Monde " + zone.world + " : " + t.getMessage());
+         this.pl.getLogger().warning("Monde " + zone.world + " refuse par le serveur : " + t);
+
+         for (StackTraceElement line : t.getStackTrace()) {
+            this.pl.getLogger().warning("   " + line);
+
+            if (line.toString().contains("fr.bdeimt")) {
+               break;
+            }
+         }
       }
    }
 

@@ -51,6 +51,8 @@ public final class BDEIMT extends JavaPlugin {
    private Plots plots;
    private Skyblock skyblock;
    private Skins skins;
+   /** Les autres jars BDEIMT trouves dans plugins/, s'il y en a. */
+   private final java.util.List<String> doubles = new java.util.ArrayList<>();
    private SkyHub skyhub;
 
    public static BDEIMT get() {
@@ -157,6 +159,20 @@ public final class BDEIMT extends JavaPlugin {
       return this.skins;
    }
 
+   /** Le nom du fichier .jar reellement charge par le serveur. */
+   public String getFileName() {
+      try {
+         return this.getFile().getName();
+      } catch (Throwable t) {
+         return "?";
+      }
+   }
+
+   /** Les jars en trop, a signaler au staff tant qu'ils sont la. */
+   public java.util.List<String> doublesJar() {
+      return this.doubles;
+   }
+
    public SkyHub skyhub() {
       return this.skyhub;
    }
@@ -167,6 +183,7 @@ public final class BDEIMT extends JavaPlugin {
 
    public void onEnable() {
       instance = this;
+      this.checkJars();
       this.saveDefaultConfig();
       // Avant tout le reste : les modules lisent ces reglages des leur creation.
       this.ensureDefaults();
@@ -345,7 +362,26 @@ public final class BDEIMT extends JavaPlugin {
          var9.kick(Msg.mm("<#4FC3FF>Le serveur vient d'être mis à jour.</#4FC3FF>\n<gray>Reconnecte-toi !"));
       }
 
-      this.getLogger().info("BDEIMT pret : lobby, connexion, votes, kits, tombes, tpa, echanges.");
+      this.getLogger().info("==============================================================");
+      this.getLogger().info(" BDEIMT version " + this.getPluginMeta().getVersion() + " charge depuis " + this.getFile().getName());
+      this.getLogger().info(" Mondes ouverts :");
+
+      for (Zone var30 : Zone.values()) {
+         if (var30.isGameMode()) {
+            this.getLogger()
+               .info(
+                  "   " + (this.worlds.available(var30) ? "OUI" : "non")
+                     + "  " + var30.shortLabel()
+                     + (this.worlds.enabled(var30) ? "" : " (ferme dans config.yml)")
+               );
+         }
+      }
+
+      if (Bukkit.getPluginManager().getPlugin("Multiverse-Core") != null) {
+         this.getLogger().info(" Multiverse-Core detecte : il charge ses mondes avant nous.");
+      }
+
+      this.getLogger().info("==============================================================");
    }
 
    public void onDisable() {
@@ -456,6 +492,52 @@ public final class BDEIMT extends JavaPlugin {
       }
 
       return new Location(var1, var3.getX() + 0.5, var3.getY(), var3.getZ() + 0.5, var2.getYaw(), 0.0F);
+   }
+
+   /**
+    * Verifie qu'il n'y a qu'un seul jar du plugin dans {@code plugins/}.
+    *
+    * <p>C'est le piege le plus couteux de tous : deposer la nouvelle version
+    * sous un autre nom — BDEIMT-2.jar, BDEIMTv4.jar, BDEIMT (1).jar — sans
+    * retirer l'ancienne. Les deux portent le meme nom de plugin, le serveur
+    * n'en charge qu'un, souvent le plus ancien, et refuse l'autre. Tout ce
+    * qu'on vient de livrer semble alors n'avoir aucun effet.
+    */
+   private void checkJars() {
+      try {
+         File var1 = this.getFile();
+         File[] var2 = var1.getParentFile().listFiles();
+
+         if (var2 == null) {
+            return;
+         }
+
+         for (File var6 : var2) {
+            String var7 = var6.getName();
+
+            if (var6.isFile()
+               && var7.toLowerCase(java.util.Locale.ROOT).endsWith(".jar")
+               && var7.toLowerCase(java.util.Locale.ROOT).contains("bdeimt")
+               && !var6.getAbsolutePath().equals(var1.getAbsolutePath())) {
+               this.doubles.add(var7);
+            }
+         }
+
+         if (!this.doubles.isEmpty()) {
+            this.getLogger().severe("==============================================================");
+            this.getLogger().severe(" ATTENTION : plusieurs jars du plugin dans le dossier plugins.");
+            this.getLogger().severe(" Celui qui tourne : " + var1.getName() + " (version " + this.getPluginMeta().getVersion() + ")");
+
+            for (String var9 : this.doubles) {
+               this.getLogger().severe(" A SUPPRIMER      : " + var9);
+            }
+
+            this.getLogger().severe(" Garde un seul fichier, puis /stop. Sinon le serveur peut");
+            this.getLogger().severe(" continuer a charger l'ancienne version sans le dire.");
+            this.getLogger().severe("==============================================================");
+         }
+      } catch (Throwable var10) {
+      }
    }
 
    /**
