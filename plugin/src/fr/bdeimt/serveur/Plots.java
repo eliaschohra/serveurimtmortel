@@ -461,7 +461,10 @@ public final class Plots implements Listener, CommandExecutor, TabCompleter, Wor
    public void onBucket(org.bukkit.event.player.PlayerBucketEmptyEvent e) {
       if (this.protectedFor(e.getPlayer(), e.getBlock().getLocation())) {
          e.setCancelled(true);
-         Msg.err(e.getPlayer(), "Ce n'est pas ta parcelle.");
+         Plots.Plot plot = this.at(e.getBlock().getLocation());
+         e.getPlayer().sendActionBar(Msg.mm(plot == null
+            ? "<#FF5555>Les chemins sont protégés : pas touche !</#FF5555>"
+            : "<#FF5555>Parcelle de <white>" + plot.ownerName + "</white> : pas touche !</#FF5555>"));
       }
    }
 

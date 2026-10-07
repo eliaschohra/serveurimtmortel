@@ -1,3 +1,12 @@
+# BDEIMT v3.7 — mise à jour
+
+1. Remplace `plugins/BDEIMT.jar`, puis `/stop`. Rien n'est effacé : îles, parcelles, parkour et mondes restent tels quels.
+2. Rouvre le skyblock : `/imt mode skyblock on`, puis `/stop`.
+3. En jeu : `/imt skyblock` (état des îles), puis `/imt skyblock nettoyer` (cherche le terrain parasite, ne touche à rien), puis `/imt skyblock nettoyer confirmer` (le retire).
+4. Nommer un modérateur : `/imt modo add <pseudo>`. Il reçoit sa liste de commandes (`/modo`).
+
+---
+
 # BDEIMT v3.4 — mise à jour
 
 1. Remplace `plugins/BDEIMT.jar`, puis `/stop`.

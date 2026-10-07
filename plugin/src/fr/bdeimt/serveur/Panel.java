@@ -41,6 +41,35 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 public final class Panel implements CommandExecutor, TabCompleter, Listener {
+   /** Les moderateurs qui regardent l'inventaire d'un joueur : ils voient, ils ne prennent rien. */
+   private static final java.util.Set<java.util.UUID> LOOK_ONLY = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+   static void lookOnly(Player viewer) {
+      if (!BDEIMT.get().ranks().isAdmin(viewer)) {
+         LOOK_ONLY.add(viewer.getUniqueId());
+         Msg.info(viewer, "<gray>Inventaire en lecture seule (seul le Mobutu peut le modifier).</gray>");
+      }
+   }
+
+   @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+   public void onLookClick(org.bukkit.event.inventory.InventoryClickEvent e) {
+      if (LOOK_ONLY.contains(e.getWhoClicked().getUniqueId())) {
+         e.setCancelled(true);
+      }
+   }
+
+   @EventHandler(priority = org.bukkit.event.EventPriority.LOWEST)
+   public void onLookDrag(org.bukkit.event.inventory.InventoryDragEvent e) {
+      if (LOOK_ONLY.contains(e.getWhoClicked().getUniqueId())) {
+         e.setCancelled(true);
+      }
+   }
+
+   @EventHandler
+   public void onLookClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+      LOOK_ONLY.remove(e.getPlayer().getUniqueId());
+   }
+
    private final BDEIMT pl;
    private final Map<UUID, Long> sessionStart = new HashMap<>();
    private final Set<Menu> open = new HashSet<>();
@@ -661,9 +690,11 @@ public final class Panel implements CommandExecutor, TabCompleter, Listener {
                      break;
                   case 14:
                      var1.openInventory(var3.getInventory());
+                     Panel.lookOnly(var1);
                      break;
                   case 15:
                      var1.openInventory(var3.getEnderChest());
+                     Panel.lookOnly(var1);
                      break;
                   case 16:
                      if (var5) {

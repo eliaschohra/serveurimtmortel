@@ -1,5 +1,5 @@
 name: BDEIMT
-version: '3.6'
+version: '3.7'
 main: fr.bdeimt.serveur.BDEIMT
 api-version: '1.21'
 author: Elias
@@ -169,6 +169,9 @@ commands:
   maintenance:
     description: Prevenir et fermer le serveur (OP)
     permission: bdeimt.op
+  modo:
+    description: Les outils des moderateurs (/modo pour la liste)
+    aliases: [moderation]
   moderateur:
     description: Donner ou retirer le role Moderateur (OP)
     permission: bdeimt.op

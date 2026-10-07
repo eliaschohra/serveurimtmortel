@@ -71,6 +71,9 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
             case "solde":
                this.money(var1, var4);
                break;
+            case "skyblock":
+               this.pl.skyRepair().command(var1, var4);
+               break;
             case "sons":
                this.pl.sounds().configure(var1, var4);
                break;
@@ -192,6 +195,8 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
       Msg.raw(var1, " <white>/imt listes ‹liste› ‹nombre|+1|-1›</white> <gray>— voix d'une liste · <white>/imt listes reset</white>");
       Msg.raw(var1, " <white>/imt dragon</white> <gray>— faire renaître le dragon maintenant");
       Msg.raw(var1, " <white>/imt sons ‹lien›</white> <gray>— le pack de sons (lien mc-packs.net)");
+      Msg.raw(var1, " <white>/imt skyblock</white> <gray>— état des îles · <white>nettoyer</white> le terrain parasite · <white>ile ‹pseudo›</white>");
+      Msg.raw(var1, " <white>/imt modo add|remove|liste ‹pseudo›</white> <gray>— nommer un modérateur (il reçoit sa liste de commandes)");
       Msg.raw(var1, " <white>/imt lobby</white> <gray>— aller voir le lobby · <white>/imt reload</white> <gray>— recharger images et config");
       Msg.raw(
          var1,
@@ -228,13 +233,20 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
                Msg.ok(var1, "<white><n></white> n'est plus modérateur.", Msg.p("n", var3.name));
             } else {
                this.pl.state().modos.put(var3.uuid, var3.name);
-               Msg.ok(var1, "<white><n></white> est maintenant <#FFB020><bold>[Modérateur]</bold></#FFB020>.", Msg.p("n", var3.name));
+               Msg.ok(var1, "<white><n></white> est maintenant " + Ranks.Rank.MODO.prefix + "<#55FF88>. Il reçoit la liste de ses commandes (/modo).", Msg.p("n", var3.name));
             }
 
             this.pl.state().save();
             Player var5 = Bukkit.getPlayer(var3.uuid);
             if (var5 != null && this.pl.auth().isLogged(var5)) {
                this.pl.ranks().apply(var5);
+               this.pl.tab().refresh(var5);
+
+               if (this.pl.state().modos.containsKey(var3.uuid)) {
+                  this.pl.modo().welcome(var5);
+               } else {
+                  Msg.info(var5, "Tu n'es plus modérateur. Merci pour ton aide !");
+               }
             }
          }
       }
@@ -739,7 +751,7 @@ public final class AdminCommand implements CommandExecutor, TabCompleter {
          return var5;
       } else {
          if (var4.length == 1) {
-            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo", "aura", "marchand", "solde", "hologramme", "mode", "sons"));
+            var5.addAll(List.of("modo", "resetmdp", "info", "votes", "lot", "dragon", "lobby", "reload", "traq", "listes", "monde", "portail", "pnj", "photo", "aura", "marchand", "solde", "hologramme", "mode", "sons", "skyblock"));
          } else if (var4.length == 2) {
             String var10 = var4[0].toLowerCase(Locale.ROOT);
             switch (var10) {

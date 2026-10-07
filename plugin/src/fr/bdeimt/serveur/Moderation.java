@@ -58,6 +58,11 @@ public final class Moderation implements CommandExecutor, TabCompleter, Listener
       }
    }
 
+   /** Le Mobutu et la console n'ont pas de limite ; un moderateur, si. */
+   private boolean limited(CommandSender sender) {
+      return sender instanceof Player p && !this.pl.ranks().isAdmin(p);
+   }
+
    private static String reason(String[] var0, int var1) {
       return var0.length <= var1 ? "Non précisée" : String.join(" ", Arrays.copyOfRange(var0, var1, var0.length));
    }
@@ -114,7 +119,17 @@ public final class Moderation implements CommandExecutor, TabCompleter, Listener
          PlayerData var3 = this.target(var1, var2[0]);
          if (var3 != null && !this.protectedTarget(var1, var3)) {
             long var4 = var2.length >= 2 ? Util.parseDuration(var2[1]) : -1L;
-            int var6 = var4 > 0L ? 2 : 1;
+
+            // Un moderateur ne rend muet que 24 h au plus, jamais « pour toujours ».
+            if (this.limited(var1) && (var4 <= 0L || var4 > ModoCommand.MAX_MUTE)) {
+               if (var4 > ModoCommand.MAX_MUTE) {
+                  Msg.info(var1, "Un modérateur rend muet 24 h au maximum : durée ramenée à 24 h.");
+               }
+
+               var4 = var4 <= 0L ? 3600000L : ModoCommand.MAX_MUTE;
+            }
+
+            int var6 = var2.length >= 2 && Util.parseDuration(var2[1]) > 0L ? 2 : 1;
             String var7 = reason(var2, var6);
             var3.mutedUntil = var4 > 0L ? System.currentTimeMillis() + var4 : -1L;
             var3.muteReason = var7;
@@ -166,6 +181,17 @@ public final class Moderation implements CommandExecutor, TabCompleter, Listener
          PlayerData var4 = this.target(var1, var2[0]);
          if (var4 != null && !this.protectedTarget(var1, var4)) {
             long var5 = var3 ? Util.parseDuration(var2[1]) : -1L;
+
+            if (!var3 && this.limited(var1)) {
+               Msg.err(var1, "Le bannissement définitif est réservé au Mobutu. Utilise <white>/tempban ‹pseudo› ‹durée› ‹raison›</white> (7 jours max).");
+               return;
+            }
+
+            if (var3 && this.limited(var1) && var5 > ModoCommand.MAX_TEMPBAN) {
+               Msg.info(var1, "Un modérateur bannit 7 jours au maximum : durée ramenée à 7 jours.");
+               var5 = ModoCommand.MAX_TEMPBAN;
+            }
+
             if (var3 && var5 <= 0L) {
                Msg.err(var1, "Durée invalide. Exemples : <white>30m</white>, <white>2h</white>, <white>3j</white>, <white>1sem</white>.");
             } else {

@@ -465,6 +465,15 @@ public final class Auth implements Listener, CommandExecutor {
       }
 
       this.pl.ranks().apply(var1);
+
+      if (this.pl.ranks().rankOf(var1) == Ranks.Rank.MODO) {
+         Bukkit.getScheduler().runTaskLater(this.pl, () -> {
+            if (var1.isOnline()) {
+               Msg.info(var1, "Tu es " + Ranks.Rank.MODO.prefix + "<gray> : tes commandes avec <white>/modo</white>.</gray>");
+            }
+         }, 60L);
+      }
+
       GameMode var9 = var5;
       this.pl.lobby().leave(var1, var4, () -> {
          var1.setGameMode(var9);
@@ -574,6 +583,18 @@ public final class Auth implements Listener, CommandExecutor {
          var2,
          var3.worldGroup != null && !var3.worldGroup.isBlank() ? var3.worldGroup : this.pl.worlds().zoneOf(var2).group
       );
+      // Le jeu rend au joueur l'inventaire du mode ou il s'est deconnecte (la
+      // survie, souvent) : on le range dans ce mode, puis on vide l'ecran.
+      // Pendant le /login on est dans le groupe « lobby » ; a la connexion,
+      // switchTo ressort l'inventaire du bon mode.
+      // Si la sauvegarde echoue, on ne vide rien : mieux vaut voir son stuff
+      // que le perdre.
+      if (!Zone.HUB.group.equals(this.pl.inventories().currentGroup(var2)) && this.pl.inventories().save(var2)) {
+         Inventories.clear(var2);
+         var2.getEnderChest().clear();
+         this.pl.inventories().setCurrentGroup(var2, Zone.HUB.group);
+      }
+
       this.pl.lobby().enter(var2);
       Bukkit.getScheduler().runTaskLater(this.pl, () -> this.prompt(var2, true), 15L);
    }

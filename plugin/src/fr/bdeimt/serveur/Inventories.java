@@ -109,15 +109,17 @@ public final class Inventories {
    }
 
    /** Range l'inventaire courant du joueur sans rien changer a l'ecran. */
-   public void save(Player p) {
+   public boolean save(Player p) {
       UUID uuid = p.getUniqueId();
       YamlConfiguration yml = YamlConfiguration.loadConfiguration(this.file(uuid));
       this.store(p, yml.createSection(this.currentGroup(p)));
 
       try {
          yml.save(this.file(uuid));
+         return true;
       } catch (IOException e) {
          this.pl.getLogger().warning("Inventaire de " + p.getName() + " non sauvegarde : " + e.getMessage());
+         return false;
       }
    }
 

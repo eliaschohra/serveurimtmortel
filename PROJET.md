@@ -336,6 +336,15 @@ Multiverse-Core remet le mode de jeu de chaque monde (survie par défaut) **just
 ### Hologrammes non sauvegardés
 Un `TextDisplay` avec `setPersistent(false)` disparaît dès que son chunk se décharge. C'est pour ça que le panneau du lobby skyblock était invisible. Il faut **toujours** un ticket de chunk (`addPluginChunkTicket`) et une vérification régulière qui le remet s'il manque (`SkyHub.tick`).
 
+### Le skyblock et Multiverse
+Un monde chargé par Multiverse sans générateur prend le générateur enregistré à sa création (terrain normal). Les chunks neufs du skyblock se remplissaient alors d'herbe, de pierre et de mer. Trois verrous :
+- `bukkit.yml` : `worlds.<monde>.generator: BDEIMT` pour tous nos mondes (écrit au démarrage), et `BDEIMT#getDefaultWorldGenerator` ;
+- `Skyblock#init` décharge et recharge le monde s'il n'a pas `Skyblock.VoidGenerator` ;
+- `/imt skyblock nettoyer` retire le terrain déjà généré (un chunk naturel a de la bedrock tout en bas, jamais un chunk du skyblock).
+
+### Ne jamais sauvegarder ce qu'on n'a pas lu
+`Skyblock#save` ne fait rien tant que `skyblock.yml` n'a pas été lu (skyblock fermé au démarrage) : sinon le fichier était remplacé par une liste vide, et les nouvelles îles se construisaient sur les anciennes. `freeSlot` saute aussi toute case déjà occupée sur la carte.
+
 ### Système
 
 - **SELinux** (Oracle Linux) empêche systemd de lancer un script du dossier

@@ -32,7 +32,6 @@ public final class Ranks implements Listener {
       "coreprotect.co",
       "coreprotect.help",
       "grim.alerts",
-      "grim.alerts.enable-on-join",
       "grim.verbose",
       "bdeimt.modo"
    };
@@ -94,18 +93,58 @@ public final class Ranks implements Listener {
          }
       }
 
-      if (var2 == Ranks.Rank.MODO) {
+      if (var2 == Ranks.Rank.MODO || var2 == Ranks.Rank.MOBUTU) {
          PermissionAttachment var12 = var1.addAttachment(this.pl);
 
-         for (String var9 : MODO_PERMS) {
-            var12.setPermission(var9, true);
+         if (var2 == Ranks.Rank.MODO) {
+            for (String var9 : MODO_PERMS) {
+               var12.setPermission(var9, true);
+            }
          }
 
+         // Les alertes de l'anti-triche Grim (« X failed Simulation »...) ne
+         // s'allument plus toutes seules a la connexion : /grim alerts les
+         // montre a la demande.
+         var12.setPermission("grim.alerts.enable-on-join", false);
          this.attachments.put(var1.getUniqueId(), var12);
       }
 
       var1.recalculatePermissions();
       var1.updateCommands();
+   }
+
+   /**
+    * Les autres modes donnent a chacun son propre tableau (pour le panneau
+    * de droite) : sans les equipes, le [Modo] ou le [Mobutu] disparaissait
+    * au-dessus des tetes. On les recopie chaque seconde.
+    */
+   public void syncBoards() {
+      Scoreboard main = Bukkit.getScoreboardManager().getMainScoreboard();
+
+      for (Player viewer : Bukkit.getOnlinePlayers()) {
+         Scoreboard board = viewer.getScoreboard();
+
+         if (board == main) {
+            continue;
+         }
+
+         for (Ranks.Rank rank : Ranks.Rank.values()) {
+            this.team(board, rank);
+         }
+
+         for (Player other : Bukkit.getOnlinePlayers()) {
+            if (!this.pl.auth().isLogged(other)) {
+               continue;
+            }
+
+            Ranks.Rank rank = this.rankOf(other);
+            Team wanted = board.getTeam(rank.team);
+
+            if (wanted != null && !wanted.hasEntry(other.getName())) {
+               wanted.addEntry(other.getName());
+            }
+         }
+      }
    }
 
    public void setupTeams() {
@@ -118,12 +157,18 @@ public final class Ranks implements Listener {
 
    private Team team(Scoreboard var1, Ranks.Rank var2) {
       Team var3 = var1.getTeam(var2.team);
+      Component wanted = Msg.mm(var2.prefix + " ");
+
       if (var3 == null) {
          var3 = var1.registerNewTeam(var2.team);
+         var3.color(NamedTextColor.WHITE);
       }
 
-      var3.prefix(Msg.mm(var2.prefix + " "));
-      var3.color(NamedTextColor.WHITE);
+      // Seulement s'il change : chaque modification part chez tous les joueurs.
+      if (!wanted.equals(var3.prefix())) {
+         var3.prefix(wanted);
+      }
+
       return var3;
    }
 
@@ -219,7 +264,7 @@ public final class Ranks implements Listener {
 
    public static enum Rank {
       MOBUTU("0_mobutu", "<#FF3B3B><bold>[Mobutu]</bold></#FF3B3B>"),
-      MODO("1_modo", "<#FFB020><bold>[Modérateur]</bold></#FFB020>"),
+      MODO("1_modo", "<#4FA8FF><bold>[Modo]</bold></#4FA8FF>"),
       JOUEUR("2_joueur", "<#3DDC6A><bold>[Joueur]</bold></#3DDC6A>");
 
       public final String team;

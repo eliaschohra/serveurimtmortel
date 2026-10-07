@@ -84,6 +84,8 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
    private final List<Location> points = new ArrayList<>();
    private final Map<UUID, Parkour.Record> records = new ConcurrentHashMap<>();
    private final Map<UUID, Parkour.Run> runs = new ConcurrentHashMap<>();
+   /** Les parties mises en pause (on a quitte le parkour ou le serveur) : point atteint, temps ecoule. */
+   private final Map<UUID, long[]> paused = new ConcurrentHashMap<>();
    private volatile String mapName = "Warden Parkour";
    private volatile double floor = -64.0;
    /** De combien on peut descendre sous son dernier point avant d'y etre ramene. */
@@ -234,6 +236,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
 
       // Aucun point pose a la main : on prend les plaques en or de la carte.
       World w = Bukkit.getWorld(Zone.PARKOUR.world);
+      boolean importedPlates = false;
 
       if (this.points.isEmpty() && w != null) {
          for (int i = 0; i < WARDEN_PLATES.length; i++) {
@@ -252,7 +255,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
          }
 
          this.pl.getLogger().info("Parkour : les " + WARDEN_PLATES.length + " plaques en or de la carte servent de points de controle.");
-         this.save();
+         importedPlates = true;
       }
 
       this.records.clear();
@@ -268,6 +271,24 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
             } catch (IllegalArgumentException ex) {
             }
          }
+      }
+
+      this.paused.clear();
+      ConfigurationSection progress = yml.getConfigurationSection("en-cours");
+      if (progress != null) {
+         for (String key : progress.getKeys(false)) {
+            try {
+               String[] parts = progress.getString(key, "").split(";");
+               this.paused.put(UUID.fromString(key), new long[]{Long.parseLong(parts[0]), Long.parseLong(parts[1])});
+            } catch (RuntimeException ex) {
+            }
+         }
+      }
+
+      // Seulement maintenant : une sauvegarde plus tot aurait ecrit le fichier
+      // sans les records ni les parties en cours.
+      if (importedPlates) {
+         this.save();
       }
 
       if (!this.points.isEmpty()) {
@@ -287,6 +308,11 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
       }
 
       yml.set("points", lines);
+
+      // Les parties en cours de ceux qui sont partis : point atteint ; temps ecoule.
+      for (Map.Entry<UUID, long[]> entry : this.paused.entrySet()) {
+         yml.set("en-cours." + entry.getKey(), entry.getValue()[0] + ";" + entry.getValue()[1]);
+      }
 
       for (Parkour.Record record : this.records.values()) {
          yml.set("records." + record.uuid + ".nom", record.name);
@@ -321,8 +347,46 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
 
    // --------------------------------------------------------------- partie
 
-   /** Remet le joueur au depart et relance son chrono. */
+   /**
+    * En arrivant sur le parkour : on reprend la ou on s'etait arrete (le
+    * dernier point de controle et le chrono sont gardes, meme apres une
+    * deconnexion), sinon on part du debut.
+    */
    public void start(Player p) {
+      long[] saved = this.paused.remove(p.getUniqueId());
+
+      if (saved != null && saved[0] > 0 && saved[0] < this.points.size()) {
+         Parkour.Run run = new Parkour.Run();
+         run.reached = (int)saved[0];
+         run.started = System.currentTimeMillis() - Math.max(0L, saved[1]);
+         run.checkpoint = this.points.get(run.reached - 1).clone();
+         this.runs.put(p.getUniqueId(), run);
+         p.teleport(run.checkpoint);
+         p.setFallDistance(0.0F);
+         this.ensureStick(p);
+         p.getInventory().setHeldItemSlot(STICK_SLOT);
+         Msg.poulpy(p, "Tu reprends à ton dernier point de contrôle (<white>" + run.reached + "</white> / " + this.points.size() + "), chrono compris. <gray>Repartir de zéro : /parkour recommencer</gray>");
+         Util.sound(p, "block.note_block.pling", 0.8F, 1.6F);
+         this.save();
+         return;
+      }
+
+      this.restart(p);
+   }
+
+   /** Met la partie en pause : on la retrouvera en revenant. */
+   private void pause(UUID uuid) {
+      Parkour.Run run = this.runs.remove(uuid);
+
+      if (run != null && run.reached > 0 && run.reached < this.points.size()) {
+         this.paused.put(uuid, new long[]{run.reached, System.currentTimeMillis() - run.started});
+         this.save();
+      }
+   }
+
+   /** Remet le joueur au depart et relance son chrono. */
+   public void restart(Player p) {
+      this.paused.remove(p.getUniqueId());
       Parkour.Run run = new Parkour.Run();
       run.started = System.currentTimeMillis();
       run.reached = 0;
@@ -465,7 +529,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
 
    @EventHandler
    public void onQuit(PlayerQuitEvent e) {
-      this.runs.remove(e.getPlayer().getUniqueId());
+      this.pause(e.getPlayer().getUniqueId());
       this.stickUse.remove(e.getPlayer().getUniqueId());
    }
 
@@ -485,8 +549,13 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
             } catch (Throwable t) {
             }
          } else {
-            // On ne repart pas avec le baton dans un autre monde.
+            // On ne repart pas avec le baton dans un autre monde, et la
+            // partie attend qu'on revienne.
             this.removeStick(p);
+
+            if (this.runs.containsKey(p.getUniqueId())) {
+               this.pause(p.getUniqueId());
+            }
          }
       }
    }
@@ -666,6 +735,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
             }
             case "reset" -> {
                this.records.clear();
+               this.paused.clear();
                this.save();
                this.refreshHologram();
                Msg.ok(p, "Classement du parkour remis à zéro.");
@@ -690,7 +760,7 @@ public final class Parkour implements Listener, CommandExecutor, TabCompleter {
          if (this.pl.worlds().zoneOf(p) != Zone.PARKOUR) {
             Msg.err(p, "Il faut être sur le parkour.");
          } else {
-            this.start(p);
+            this.restart(p);
          }
 
          return true;

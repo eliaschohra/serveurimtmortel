@@ -52,6 +52,8 @@ public final class BDEIMT extends JavaPlugin {
    private Parkour parkour;
    private Plots plots;
    private Skyblock skyblock;
+   private SkyRepair skyRepair;
+   private ModoCommand modoCommand;
    private Skins skins;
    private Sounds sounds;
    private Economy economy;
@@ -159,6 +161,14 @@ public final class BDEIMT extends JavaPlugin {
 
    public Skyblock skyblock() {
       return this.skyblock;
+   }
+
+   public SkyRepair skyRepair() {
+      return this.skyRepair;
+   }
+
+   public ModoCommand modo() {
+      return this.modoCommand;
    }
 
    public Skins skins() {
@@ -386,6 +396,9 @@ public final class BDEIMT extends JavaPlugin {
       this.cmd("maintenance", this.maintenance, this.maintenance);
       OpCommands var19 = new OpCommands(this, var14);
       this.cmd("moderateur", var19, var19);
+      this.skyRepair = new SkyRepair(this);
+      this.modoCommand = new ModoCommand(this);
+      this.cmd("modo", this.modoCommand, this.modoCommand);
       Bukkit.getScheduler().runTaskTimer(this, () -> {
          this.auth.tick();
          this.fly.tick();
@@ -394,6 +407,7 @@ public final class BDEIMT extends JavaPlugin {
          this.hub.musicTick();
          this.skyhub.tick();
          this.skyblock.tick();
+         this.ranks.syncBoards();
          this.parkour.tick();
          this.plots.tick();
       }, 20L, 20L);
@@ -687,8 +701,58 @@ public final class BDEIMT extends JavaPlugin {
       }
    }
 
+   /**
+    * Le generateur de nos mondes, quel que soit celui qui les charge.
+    *
+    * <p>Si un autre plugin (Multiverse) charge un de nos mondes sans
+    * generateur, Paper lit bukkit.yml (« worlds.‹monde›.generator: BDEIMT »)
+    * et nous demande le bon. Sans ca, les chunks neufs du skyblock se
+    * remplissaient de terrain normal et de mer autour des iles.
+    */
+   @Override
+   public org.bukkit.generator.ChunkGenerator getDefaultWorldGenerator(String worldName, String id) {
+      if (Zone.PARCELLES.world.equalsIgnoreCase(worldName)) {
+         return new Plots.Generator();
+      }
+
+      return new Skyblock.VoidGenerator();
+   }
+
+   /** Nos mondes, et le generateur que bukkit.yml doit leur donner. */
+   private static final String[] OWN_WORLDS = new String[]{
+      "bdeimt_lobby", "bdeimt_hub", "bdeimt_parkour", "bdeimt_skyspawn", "bdeimt_skyblock", "bdeimt_parcelles"
+   };
+
+   private void fixGenerators() {
+      try {
+         File file = new File(this.getServer().getWorldContainer(), "bukkit.yml");
+
+         if (!file.exists()) {
+            return;
+         }
+
+         YamlConfiguration yml = YamlConfiguration.loadConfiguration(file);
+         boolean changed = false;
+
+         for (String name : OWN_WORLDS) {
+            if (!"BDEIMT".equals(yml.getString("worlds." + name + ".generator"))) {
+               yml.set("worlds." + name + ".generator", "BDEIMT");
+               changed = true;
+            }
+         }
+
+         if (changed) {
+            yml.save(file);
+            this.getLogger().info("bukkit.yml : nos mondes utilisent maintenant toujours le generateur BDEIMT.");
+         }
+      } catch (Exception ex) {
+         this.getLogger().warning("bukkit.yml non modifie : " + ex.getMessage());
+      }
+   }
+
    private void fixServerSettings() {
       boolean var1 = false;
+      this.fixGenerators();
 
       try {
          File var2 = new File(this.getServer().getWorldContainer(), "spigot.yml");

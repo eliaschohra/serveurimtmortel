@@ -103,7 +103,22 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
          return;
       }
 
-      if (Bukkit.getWorld(Zone.SKYBLOCK.world) == null) {
+      World already = Bukkit.getWorld(Zone.SKYBLOCK.world);
+
+      // Charge par quelqu'un d'autre (Multiverse) sans notre generateur : les
+      // chunks neufs se rempliraient de terrain et de mer autour des iles. On
+      // le decharge et on le recharge avec le bon, avant l'arrivee des joueurs.
+      if (already != null && !(already.getGenerator() instanceof Skyblock.VoidGenerator)) {
+         this.pl.getLogger().warning("Le monde du skyblock etait charge sans le generateur vide (par Multiverse ?) : rechargement.");
+
+         if (already.getPlayers().isEmpty() && Bukkit.unloadWorld(already, true)) {
+            already = null;
+         } else {
+            this.pl.getLogger().severe("Impossible de recharger le skyblock avec le generateur vide : du terrain pourrait apparaitre autour des iles.");
+         }
+      }
+
+      if (already == null) {
          try {
             Bukkit.createWorld(
                new WorldCreator(Zone.SKYBLOCK.world)
@@ -217,14 +232,17 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       return Math.abs(l.getBlockX() - gx * SPACING) <= RADIUS && Math.abs(l.getBlockZ() - gz * SPACING) <= RADIUS ? island : null;
    }
 
+   /** L'ile dont on est proprietaire (la plus recente si skyblock.yml en compte deux). */
    public Skyblock.Island islandOf(UUID uuid) {
+      Skyblock.Island found = null;
+
       for (Skyblock.Island island : this.islands.values()) {
-         if (island.owner.equals(uuid)) {
-            return island;
+         if (island.owner.equals(uuid) && (found == null || island.created > found.created)) {
+            found = island;
          }
       }
 
-      return null;
+      return found;
    }
 
    /** L'ile d'un ami sur laquelle on a ete invite, ou null. */
@@ -245,6 +263,17 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    }
 
    // ------------------------------------------------------------ chargement
+
+   /** Vrai une fois skyblock.yml lu : avant, on ne doit surtout pas l'ecraser. */
+   private volatile boolean loaded;
+
+   public boolean isLoaded() {
+      return this.loaded;
+   }
+
+   public java.util.Collection<Skyblock.Island> all() {
+      return java.util.Collections.unmodifiableCollection(this.islands.values());
+   }
 
    public void load() {
       YamlConfiguration yml = YamlConfiguration.loadConfiguration(this.file);
@@ -293,10 +322,53 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
          }
       }
 
+      this.checkIntegrity();
+      this.loaded = true;
       this.pl.getLogger().info(this.islands.size() + " ile(s) skyblock chargee(s).");
    }
 
+   /**
+    * Remet de l'ordre si skyblock.yml s'est contredit : quelqu'un qui possede
+    * deux iles garde la plus recente (l'autre reste sur la carte, sans
+    * proprietaire actif, et n'est jamais effacee) ; quelqu'un qui a sa propre
+    * ile n'est plus compte comme invite chez un autre.
+    */
+   private void checkIntegrity() {
+      Map<UUID, Skyblock.Island> newest = new java.util.HashMap<>();
+
+      for (Skyblock.Island island : this.islands.values()) {
+         Skyblock.Island other = newest.get(island.owner);
+
+         if (other == null || island.created > other.created) {
+            newest.put(island.owner, island);
+         }
+      }
+
+      for (Skyblock.Island island : this.islands.values()) {
+         if (newest.get(island.owner) != island) {
+            this.pl.getLogger().warning("Ile " + island.key() + " : " + island.ownerName + " en a deja une autre (" + newest.get(island.owner).key() + "). Elle est gardee telle quelle, voir /imt skyblock diag.");
+         }
+
+         island.members.removeIf(member -> {
+            boolean ownsOne = newest.containsKey(member);
+
+            if (ownsOne) {
+               this.pl.getLogger().warning("Ile " + island.key() + " : un invite possede deja sa propre ile, il est retire des invites.");
+            }
+
+            return ownsOne;
+         });
+      }
+   }
+
    public void save() {
+      // Skyblock ferme au demarrage : rien n'a ete lu. Sauvegarder maintenant
+      // remplacerait skyblock.yml par un fichier vide, et toutes les iles
+      // seraient oubliees (puis reconstruites les unes sur les autres).
+      if (!this.loaded) {
+         return;
+      }
+
       YamlConfiguration yml = new YamlConfiguration();
 
       for (Skyblock.Island island : this.islands.values()) {
@@ -342,7 +414,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       int dz = -1;
 
       for (int i = 0; i < 40000; i++) {
-         if (!this.islands.containsKey(x + "," + z)) {
+         if (!this.islands.containsKey(x + "," + z) && !this.occupied(x, z)) {
             return new int[]{x, z};
          }
 
@@ -357,6 +429,38 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       }
 
       return new int[]{0, 0};
+   }
+
+   /**
+    * Y a-t-il deja quelque chose au centre de cette case ? Une ile peut exister
+    * sur la carte sans etre dans skyblock.yml (fichier perdu, vieille version) :
+    * on ne construit jamais par-dessus.
+    */
+   private boolean occupied(int gx, int gz) {
+      World w = this.pl.worlds().world(Zone.SKYBLOCK);
+
+      if (w == null) {
+         return false;
+      }
+
+      int cx = gx * SPACING;
+      int cz = gz * SPACING;
+
+      if (!w.isChunkGenerated(cx >> 4, cz >> 4)) {
+         return false;
+      }
+
+      for (int dx = -6; dx <= 6; dx += 2) {
+         for (int dz = -6; dz <= 6; dz += 2) {
+            if (w.getHighestBlockYAt(cx + dx, cz + dz) > w.getMinHeight()
+               && !w.getHighestBlockAt(cx + dx, cz + dz).getType().isAir()) {
+               this.pl.getLogger().info("Case " + gx + "," + gz + " deja occupee sur la carte : on en prend une autre.");
+               return true;
+            }
+         }
+      }
+
+      return false;
    }
 
    /** Le modele de l'ile, lu une fois dans ile-classique.txt. */
@@ -1085,7 +1189,7 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
    }
 
    private void info(Player p) {
-      Skyblock.Island mine = this.islandOf(p.getUniqueId());
+      Skyblock.Island mine = this.homeIslandOf(p.getUniqueId());
 
       if (mine == null) {
          Msg.info(p, "Tu n'as pas encore d'île : <white>/ile creer</white>.");
@@ -1093,7 +1197,11 @@ public final class Skyblock implements Listener, CommandExecutor, TabCompleter, 
       }
 
       Msg.raw(p, "<dark_gray>———— <#7FE3FF>Ton île</#7FE3FF> ————</dark_gray>");
-      Msg.raw(p, "<gray>Case : <white>" + mine.key() + "</white>   ·   Invités : <white>" + mine.members.size() + "</white> / " + (MAX_MEMBERS - 1) + "</gray>");
+      Msg.raw(p, "<gray>Case : <white>" + mine.key() + "</white> <dark_gray>(x " + mine.x * SPACING + ", z " + mine.z * SPACING + ")</dark_gray>   ·   Invités : <white>" + mine.members.size() + "</white> / " + (MAX_MEMBERS - 1) + "</gray>");
+
+      if (!mine.owner.equals(p.getUniqueId())) {
+         Msg.raw(p, "<gray>Tu habites chez <white>" + mine.ownerName + "</white>.</gray>");
+      }
       Msg.raw(p, "<gray>Zone de construction : <white>" + RADIUS * 2 + " × " + RADIUS * 2 + "</white> blocs autour du centre.</gray>");
    }
 

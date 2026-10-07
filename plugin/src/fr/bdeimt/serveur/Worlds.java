@@ -750,7 +750,22 @@ public final class Worlds implements Listener {
    private void denied(Player p, Location at) {
       Zone zone = this.zoneOf(at.getWorld());
 
-      if (zone.build) {
+      if (zone == Zone.PARCELLES) {
+         Plots.Plot plot = this.pl.plots().at(at);
+
+         if (plot == null) {
+            p.sendActionBar(Msg.mm("<#FF5555>Les chemins sont protégés : pas touche !</#FF5555>"));
+         } else if (plot.banned.contains(p.getUniqueId())) {
+            p.sendActionBar(Msg.mm("<#FF5555>Tu es banni de la parcelle de <white>" + plot.ownerName + "</white>.</#FF5555>"));
+         } else {
+            p.sendActionBar(Msg.mm("<#FF5555>Parcelle de <white>" + plot.ownerName + "</white> : pas touche !</#FF5555>"));
+         }
+      } else if (zone == Zone.SKYBLOCK) {
+         Skyblock.Island island = this.pl.skyblock().at(at);
+         p.sendActionBar(Msg.mm(island == null
+            ? "<#FF5555>Hors de toute île : on ne construit pas ici.</#FF5555>"
+            : "<#FF5555>Île de <white>" + island.ownerName + "</white> : pas touche !</#FF5555>"));
+      } else if (zone.build) {
          Msg.err(p, "Ce n'est pas chez toi : tu ne peux rien modifier ici.");
       } else if (this.pl.ranks().isAdmin(p)) {
          Msg.err(p, "On ne casse rien dans <white>" + zone.shortLabel() + "</white>. <gray>Pour modifier la carte : /gamemode creative.</gray>");
@@ -835,7 +850,7 @@ public final class Worlds implements Listener {
    private static final java.util.Set<String> PARTOUT = java.util.Set.of(
       "register", "reg", "inscription", "login", "l", "log", "connexion", "changemdp", "changepassword",
       "msg", "m", "w", "tell", "r", "repondre", "ignore", "guide", "aide", "spawn", "hub", "lobby",
-      "panel", "mute", "unmute", "tempban", "ban", "unban", "kick", "imt", "maintenance", "moderateur", "musique", "music",
+      "panel", "mute", "unmute", "tempban", "ban", "unban", "kick", "imt", "maintenance", "moderateur", "modo", "musique", "music",
       "maudire", "help", "?"
    );
    /** Ce qui n'a de sens qu'en survie : les delires, les votes, les tombes. */
