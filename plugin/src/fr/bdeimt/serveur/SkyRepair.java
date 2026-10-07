@@ -82,7 +82,11 @@ public final class SkyRepair {
       String sub = args.length >= 2 ? args[1].toLowerCase(java.util.Locale.ROOT) : "diag";
 
       switch (sub) {
-         case "nettoyer" -> this.clean(sender, args.length >= 3 && args[2].equalsIgnoreCase("confirmer"));
+         case "nettoyer" -> {
+            boolean all = args.length >= 3 && args[2].equalsIgnoreCase("tout");
+            boolean confirmed = args.length >= 3 && args[args.length - 1].equalsIgnoreCase("confirmer");
+            this.clean(sender, confirmed, all);
+         }
          case "ile" -> this.island(sender, args);
          default -> this.diag(sender);
       }
@@ -168,7 +172,10 @@ public final class SkyRepair {
 
    private record ChunkPos(int x, int z) {}
 
-   private void clean(CommandSender sender, boolean confirmed) {
+   /** En mode « tout » : autour du centre d'une ile, ce rayon n'est jamais touche. */
+   private static final int KEEP = 12;
+
+   private void clean(CommandSender sender, boolean confirmed, boolean all) {
       World w = this.pl.worlds().world(Zone.SKYBLOCK);
 
       if (w == null || !this.pl.skyblock().isLoaded()) {
@@ -207,7 +214,7 @@ public final class SkyRepair {
             ChunkPos pos = queue.poll();
 
             try {
-               this.handle(w, pos, confirmed, stats);
+               this.handle(w, pos, confirmed, all, stats);
             } catch (Throwable t) {
                this.pl.getLogger().warning("Chunk " + pos + " : " + t);
             }
@@ -225,12 +232,13 @@ public final class SkyRepair {
                Msg.raw(sender, "<#FFD25E>Terrain parasite trouvé :</#FFD25E> <white>" + stats[0] + "</white> <gray>chunks loin des îles (effacés entièrement),</gray> <white>"
                   + stats[1] + "</white> <gray>chunks dans la zone d'une île (seule la terre naturelle SOUS l'île est retirée).</gray>");
                Msg.raw(sender, "<gray>Rien n'a été touché. Pour nettoyer : <white>/imt skyblock nettoyer confirmer</white></gray>");
+               Msg.raw(sender, "<gray>Plus radical : <white>/imt skyblock nettoyer tout confirmer</white> retire aussi l'herbe, la terre et les arbres naturels AU-DESSUS du niveau des îles, sauf dans un rayon de " + KEEP + " blocs autour du centre de chaque île.</gray>");
             }
          }
       }, 1L, 1L);
    }
 
-   private void handle(World w, ChunkPos pos, boolean confirmed, int[] stats) {
+   private void handle(World w, ChunkPos pos, boolean confirmed, boolean all, int[] stats) {
       Chunk chunk = w.getChunkAt(pos.x(), pos.z());
       ChunkSnapshot snap = chunk.getChunkSnapshot(true, false, false);
       int min = w.getMinHeight();
@@ -241,7 +249,8 @@ public final class SkyRepair {
          return;
       }
 
-      boolean nearIsland = this.nearIsland(pos.x() * 16 + 8, pos.z() * 16 + 8);
+      Skyblock.Island owner = this.nearIsland(pos.x() * 16 + 8, pos.z() * 16 + 8);
+      boolean nearIsland = owner != null;
       stats[nearIsland ? 1 : 0]++;
 
       if (!confirmed) {
@@ -261,8 +270,21 @@ public final class SkyRepair {
                   continue;
                }
 
-               if (nearIsland && (y >= BELOW || !NATURAL.contains(type))) {
-                  continue;
+               if (nearIsland) {
+                  if (!all) {
+                     if (y >= BELOW || !NATURAL.contains(type)) {
+                        continue;
+                     }
+                  } else {
+                     int bx = pos.x() * 16 + x - owner.x * Skyblock.SPACING;
+                     int bz = pos.z() * 16 + z - owner.z * Skyblock.SPACING;
+                     boolean wild = NATURAL.contains(type) || org.bukkit.Tag.LOGS.isTagged(type) || org.bukkit.Tag.LEAVES.isTagged(type)
+                        || org.bukkit.Tag.FLOWERS.isTagged(type) || type == Material.FERN || type == Material.LARGE_FERN;
+
+                     if (!wild || Math.abs(bx) <= KEEP && Math.abs(bz) <= KEEP) {
+                        continue;
+                     }
+                  }
                }
 
                chunk.getBlock(x, y, z).setType(Material.AIR, false);
@@ -281,17 +303,17 @@ public final class SkyRepair {
    }
 
    /** Ce point est-il dans la zone d'une ile (ou tout pres) ? */
-   private boolean nearIsland(int x, int z) {
+   private Skyblock.Island nearIsland(int x, int z) {
       for (Skyblock.Island island : this.pl.skyblock().all()) {
          int dx = Math.abs(x - island.x * Skyblock.SPACING);
          int dz = Math.abs(z - island.z * Skyblock.SPACING);
 
          if (dx <= Skyblock.RADIUS + 24 && dz <= Skyblock.RADIUS + 24) {
-            return true;
+            return island;
          }
       }
 
-      return false;
+      return null;
    }
 
    /** Les chunks qui existent sur le disque, lus dans l'en-tete des fichiers .mca. */
